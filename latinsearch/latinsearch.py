@@ -515,8 +515,6 @@ class AutocompleteGUI(tk.Frame):
 
         self.scrolled_text_5.delete("0.1", "end-1c")
         result = self.dict_for_all[selection_value]
-        warning_info = ('\n\n注 1：由于异名因此搜狗词库可能存在一些拼音与拉丁名'
-                        '不对应的情况，使用时请留意。')
         if PrettyTable:
             table = PrettyTable(
                 ["Short Pinyin", "Long Pinyin", 'Chinese',
@@ -534,7 +532,6 @@ class AutocompleteGUI(tk.Frame):
                 table.add_row(tmp_list)
 
             self.scrolled_text_5.insert('end', table.get_string())
-            self.scrolled_text_5.insert('end', warning_info)
         else:
             self.scrolled_text_5.insert(
                 'end',
@@ -551,7 +548,6 @@ class AutocompleteGUI(tk.Frame):
                 elements = '  |  '.join(each_result)
                 self.scrolled_text_5.insert('end', elements)
                 self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
-            self.scrolled_text_5.insert('end', warning_info)
 
     def do_query(self):
         """Command of Do Query button. Get Search result.
