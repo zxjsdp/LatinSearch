@@ -389,15 +389,15 @@ class RightClickMenu(object):
         # check to see if there is any marked text in the entry widget.
         # if not then Cut and Copy are disabled.
         if not self.parent.selection_present():
-            menu.add_command(label="Cut", state='disable')
             menu.add_command(label="Copy", state='disable')
+            menu.add_command(label="Cut", state='disable')
         else:
             # use Tkinter's virtual events for brevity.  These could
             # be hardcoded with our own functions to immitate the same
             # actions but there's no point except as a novice exercise
             # (which I recommend if you're a novice).
-            menu.add_command(label="Cut", command=self._cut)
             menu.add_command(label="Copy", command=self._copy)
+            menu.add_command(label="Cut", command=self._cut)
         # if there's string data in the clipboard then make the normal
         # Paste command.  otherwise disable it.
         if self.paste_string_state():
@@ -520,8 +520,8 @@ class RightClickMenuForScrolledText(object):
         # be hardcoded with our own functions to immitate the same
         # actions but there's no point except as a novice exercise
         # (which I recommend if you're a novice).
-        menu.add_command(label="Cut", command=self._cut)
         menu.add_command(label="Copy", command=self._copy)
+        menu.add_command(label="Cut", command=self._cut)
         # if there's string data in the clipboard then make the normal
         # Paste command.  otherwise disable it.
         if self._paste_string_state():
