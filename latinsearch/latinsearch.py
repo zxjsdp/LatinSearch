@@ -4,11 +4,11 @@
 from __future__ import (print_function, unicode_literals,
                         with_statement)
 
-
 """Latin Search program"""
 
 import os
 import sys
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -16,6 +16,9 @@ except ImportError:
 import string
 import collections
 from difflib import SequenceMatcher
+from multiprocessing import Pool
+from multiprocessing import Process, Value, Lock
+
 try:
     from prettytable import PrettyTable
 except ImportError:
@@ -34,9 +37,7 @@ elif sys.version[0] == '3':
 __version__ = "v0.1.0"
 __author__ = 'Jin'
 
-
 _history = []
-
 
 DATA_FILE = os.path.abspath('data/latin_without_sougou.csv')
 PICKLE_KEYS_FILE = os.path.abspath('data/latin_60000.keys.pickle')
@@ -44,6 +45,13 @@ PICKLE_DICT_FILE = os.path.abspath('data/latin_60000.dict.pickle')
 
 # 中国植物志网站链接
 FRPS_BASE_URL = 'http://frps.eflora.cn/frps/'
+
+# Limit of results for similarity candidate area
+SIMILAR_RESULT_NUM_LIMIT = 30
+
+# Similarity threshold for similarity search
+SIMILARITY_THRESHOLD = 0.3
+
 # 拉丁名中的特殊字符
 SPECIAL_CHARS = ['×', '〔', '）', '【', '】', '', '', '<', '>',
                  '*', '[', '@', ']', '［', '|']
@@ -198,6 +206,7 @@ class SpellCheck(object):
              Author:  Peter Norvig
              Webpage: http://norvig.com/spell-correct.html
     """
+
     def __init__(self, candidate_list):
         self.candidate_list = candidate_list
         self.NWORDS = self.train()
@@ -229,13 +238,13 @@ class SpellCheck(object):
         """
         n = len(word)
         return set(
-            [word[0:i]+word[i+1:] for i in range(n)] +  # deletion
+            [word[0:i] + word[i + 1:] for i in range(n)] +  # deletion
             # transposition
-            [word[0:i]+word[i+1]+word[i]+word[i+2:] for i in range(n-1)] +
+            [word[0:i] + word[i + 1] + word[i] + word[i + 2:] for i in range(n - 1)] +
             # alteration
-            [word[0:i]+c+word[i+1:] for i in range(n) for c in self.alphabet] +
+            [word[0:i] + c + word[i + 1:] for i in range(n) for c in self.alphabet] +
             # insertion
-            [word[0:i]+c+word[i:] for i in range(n+1) for c in self.alphabet])
+            [word[0:i] + c + word[i:] for i in range(n + 1) for c in self.alphabet])
 
     def known_edits2(self, word):
         """Words that has two edit distance."""
@@ -260,7 +269,7 @@ class SpellCheck(object):
 
 
 class QueryWord(object):
-    """Four query strategy.
+    """Query with 4 strategy with multi-processing.
 
     [Strategies]
 
@@ -269,84 +278,135 @@ class QueryWord(object):
         3. Rank by Similarity
         4. Spell check
 
+    [turn_on_mode]
+
+        Default: (True, True, True, True)
+            Return all 4 results.
+
+        (True, True, False, False)
+            Return results of strategy_1 and strategy_2, and blank result
+            of strategy_3 and strategy_4
+
     [Usage]
 
-        lines = get_lines(file_name)
-        query_object = QueryWord(lines)
+        query_object = QueryWord(keys_for_all, dict_for_all)
 
         # Startswith
-        query_object.get_starts_with_candidates(query)
+        # query_object.get_starts_with_candidates(query)
         # Contains
-        query_object.get_contains_candidates(query)
+        # query_object.get_contains_candidates(query)
         # Similarity
-        query_object.get_similar_candidates(query, limit=30)
+        # query_object.get_similar_candidates(query, limit=30)
         # Spell Check
-        query_object.get_spell_check_candidate(query)
+        # query_object.get_spell_check_candidate(query)
         # All Four
-        query_object.query_all_four(query)
 
-
-
+        query_object.query_all_four(
+            query,
+            turn_on_mode=(True, True, True, True))
     """
-    def __init__(self, all_candidate_list):
-        self.all_candidate_list = [x.strip() for x in all_candidate_list]
-        self.trained_object = SpellCheck(all_candidate_list)
+
+    def __init__(self, keys_for_all, dict_for_all):
+        self.keys_for_all = [x.strip() for x in keys_for_all
+                                   if x.strip()]
+        self.dict_for_all = dict_for_all
+        self.trained_object = SpellCheck(keys_for_all)
+        self.query = ''
+        self.result_dict = {}
 
     # --------------------------------------------------------
     # 1:  Startswith or Endswith Check
     # --------------------------------------------------------
-    def get_starts_with_candidates(self, query):
+    def get_starts_with_candidates(self, turn_on=True):
         """Check startswith & endswith"""
         _tmp_list = []
-        for i, candidate in enumerate(self.all_candidate_list):
-            if candidate.lower().startswith(query.strip().lower()) or\
-                    candidate.lower().endswith(query.strip().lower()):
-                _tmp_list.append(candidate)
-        return _tmp_list
+        if turn_on:
+            # Check totally match. Totally matched result should be on top
+            if self.query in self.keys_for_all:
+                _tmp_list.append(self.query)
+            # Check partially match
+            for i, candidate in enumerate(self.keys_for_all):
+                if candidate.startswith(self.query) or \
+                        candidate.endswith(self.query):
+                    if candidate != self.query:
+                        _tmp_list.append(candidate)
+
+        self.result_dict.update({'0': _tmp_list})
 
     # --------------------------------------------------------
     # 2:  Contains Check
     # --------------------------------------------------------
-    def get_contains_candidates(self, query):
+    def get_contains_candidates(self, turn_on=True):
         """Check contains"""
         _tmp_list = []
-        for i, candidate in enumerate(self.all_candidate_list):
-            if query.strip().lower() in candidate.lower():
-                _tmp_list.append(candidate)
-        return _tmp_list
+        if turn_on:
+            # Check totally match. Totally matched result should be on top
+            if self.query in self.keys_for_all:
+                _tmp_list.append(self.query)
+            # Check partially match
+            for i, candidate in enumerate(self.keys_for_all):
+                if self.query in candidate:
+                    if candidate != self.query:
+                        _tmp_list.append(candidate)
+
+        self.result_dict.update({'1': _tmp_list})
 
     # --------------------------------------------------------
     # 3:  Similarity Check
     # --------------------------------------------------------
-    def get_similar_candidates(self, query, limit=30):
+    def get_similar_candidates(self, turn_on=True):
         """Rank candidates by similarity"""
         _tmp_list = []
-        for i, candidate in enumerate(self.all_candidate_list):
-            _similarity = get_similarity(candidate.lower(),
-                                         query.strip().lower())
-            _tmp_list.append((_similarity, candidate))
-        _tmp_list.sort(key=lambda x: x[0], reverse=True)
-        _tmp_list = _tmp_list[:limit]
-        _similar_hits = [_[1] for _ in _tmp_list]
-        # _similar_hits = ['%.4f  %s' % _ for _ in _tmp_list]
+        _similar_hits = []
+        # If strategy 2 (contains search) got a result, similarity search
+        # will skip for performance reason
+        if turn_on and not len(self.result_dict.get('1')) > 0:
+            for i, candidate in enumerate(self.keys_for_all):
+                _similarity = get_similarity(candidate,
+                                             self.query)
+                if _similarity > SIMILARITY_THRESHOLD:
+                    _tmp_list.append((_similarity, candidate))
+            _tmp_list.sort(key=lambda x: x[0], reverse=True)
+            _tmp_list = _tmp_list[:SIMILAR_RESULT_NUM_LIMIT]
+            _similar_hits = [_[1] for _ in _tmp_list] if _tmp_list else []
+            # _similar_hits = ['%.4f  %s' % _ for _ in _tmp_list]
 
-        return _similar_hits
+        self.result_dict.update({'2': _similar_hits})
 
     # --------------------------------------------------------
     # 4:  Advanced Spell Check
     # --------------------------------------------------------
-    def get_spell_check_candidate(self, query):
+    def get_spell_check_candidate(self, turn_on=True):
         """Get spell check candicates"""
-        return self.trained_object.correct(query)
+        candidate = ''
+        if turn_on:
+            candidate = self.trained_object.correct(self.query)
 
-    def query_all_four(self, query):
+        self.result_dict.update({'3': candidate})
+
+    def query_all_four(self, query,
+                       turn_on_mode=(True, True, True, True)):
         """Get four results"""
-        result_one = self.get_starts_with_candidates(query)
-        result_two = self.get_contains_candidates(query)
-        result_three = self.get_similar_candidates(query, limit=30)
-        result_four = self.get_spell_check_candidate(query)
+        # Reset self.query to the value of parameter query
+        self.query = query
+        func_list = [self.get_starts_with_candidates,
+                     self.get_contains_candidates,
+                     self.get_similar_candidates,
+                     self.get_spell_check_candidate]
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Multi-processing
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # for i, each_func in enumerate(func_list):
+        #     print('Start: %d' % i)
+        #     Process(target=each_func, args=(turn_on_mode[i],)).start()
 
-        return result_one, result_two, result_three, result_four
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Single process
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        for i, each_func in enumerate(func_list):
+            each_func(turn_on_mode[i])
+
+        return self.result_dict
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -578,9 +638,10 @@ class RightClickMenuForScrolledText(object):
 
 class AutocompleteGUI(tk.Frame):
     """The main GUI for autocomplete program."""
+
     def __init__(self, master=None, keys_for_all=[], dict_for_all={}):
         tk.Frame.__init__(self, master)
-        self.query_object = QueryWord(keys_for_all)
+        self.keys_for_all = keys_for_all
         self.dict_for_all = dict_for_all
         self.history = []
         self.master.grid()
@@ -589,6 +650,7 @@ class AutocompleteGUI(tk.Frame):
         self.create_widgets()
         self.grid_configure()
         self.create_right_menu()
+        self.bind_func()
         self.master.geometry('1400x800')
         self.master.title('Latin Finder %s' % __version__)
 
@@ -608,7 +670,7 @@ class AutocompleteGUI(tk.Frame):
         self.file_menu.add_command(
             label='Open',
             # command=reload_GUI_with_new_list
-            )
+        )
         self.file_menu.add_command(
             label='Exit',
             command=self.master.quit)
@@ -625,7 +687,7 @@ class AutocompleteGUI(tk.Frame):
     def create_widgets(self):
         """Create widgets for the main GUI window."""
         self.content = ttk.Frame(self.master, padding=(8))
-        self.content.grid(row=0, column=0, sticky=(tk.W+tk.E+tk.N+tk.S))
+        self.content.grid(row=0, column=0, sticky=(tk.W + tk.E + tk.N + tk.S))
 
         self.label_1 = ttk.Label(self.content,
                                  text='Candidates (Startswith / Endswith)')
@@ -659,7 +721,7 @@ class AutocompleteGUI(tk.Frame):
             self.content,
             style='auto.TCombobox')
 
-        self.input_box.grid(row=0, column=0, columnspan=6, sticky=(tk.W+tk.E))
+        self.input_box.grid(row=0, column=0, columnspan=6, sticky=(tk.W + tk.E))
         self.input_box.focus()
 
         # self.open_file_button = ttk.Button(
@@ -676,7 +738,6 @@ class AutocompleteGUI(tk.Frame):
         self.do_query_button = ttk.Button(
             self.content,
             text='Do Query',
-            command=self.show_candidates,
             style='copy.TButton')
         self.do_query_button.grid(
             row=0,
@@ -685,32 +746,32 @@ class AutocompleteGUI(tk.Frame):
             sticky=(tk.W))
 
         self.label_1.grid(row=1, column=0, columnspan=2, sticky=(tk.W))
-        self.listbox1.grid(row=2, column=0, sticky=(tk.W+tk.E+tk.N+tk.S))
-        self.scrollbar1.grid(row=2, column=1, sticky=(tk.N+tk.S))
+        self.listbox1.grid(row=2, column=0, sticky=(tk.W + tk.E + tk.N + tk.S))
+        self.scrollbar1.grid(row=2, column=1, sticky=(tk.N + tk.S))
         self.listbox1.config(yscrollcommand=self.scrollbar1.set)
         self.scrollbar1.config(command=self.listbox1.yview)
 
         self.label_2.grid(row=1, column=2, columnspan=2, sticky=(tk.W))
-        self.listbox2.grid(row=2, column=2, sticky=(tk.W+tk.E+tk.N+tk.S))
-        self.scrollbar2.grid(row=2, column=3, sticky=(tk.N+tk.S))
+        self.listbox2.grid(row=2, column=2, sticky=(tk.W + tk.E + tk.N + tk.S))
+        self.scrollbar2.grid(row=2, column=3, sticky=(tk.N + tk.S))
         self.listbox2.config(yscrollcommand=self.scrollbar2.set)
         self.scrollbar2.config(command=self.listbox2.yview)
 
         self.label_3.grid(row=1, column=4, columnspan=2, sticky=(tk.W))
-        self.listbox3.grid(row=2, column=4, sticky=(tk.W+tk.E+tk.N+tk.S))
-        self.scrollbar3.grid(row=2, column=5, sticky=(tk.N+tk.S))
+        self.listbox3.grid(row=2, column=4, sticky=(tk.W + tk.E + tk.N + tk.S))
+        self.scrollbar3.grid(row=2, column=5, sticky=(tk.N + tk.S))
         self.listbox3.config(yscrollcommand=self.scrollbar3.set)
         self.scrollbar3.config(command=self.listbox3.yview)
 
         self.label_4.grid(row=1, column=6, columnspan=2, sticky=(tk.W))
-        self.listbox4.grid(row=2, column=6, sticky=(tk.W+tk.E+tk.N+tk.S))
-        self.scrollbar4.grid(row=2, column=7, sticky=(tk.N+tk.S))
+        self.listbox4.grid(row=2, column=6, sticky=(tk.W + tk.E + tk.N + tk.S))
+        self.scrollbar4.grid(row=2, column=7, sticky=(tk.N + tk.S))
         self.listbox4.config(yscrollcommand=self.scrollbar4.set)
         self.scrollbar4.config(command=self.listbox4.yview)
 
         self.label_5.grid(row=3, column=0, columnspan=7, sticky=(tk.W))
         self.scrolled_text_5.grid(row=4, column=0, columnspan=7,
-                                  sticky=(tk.N+tk.S+tk.W+tk.E))
+                                  sticky=(tk.N + tk.S + tk.W + tk.E))
         self.scrolled_text_5.delete("0.1", "end-1c")
         self.scrolled_text_5.insert('end', USAGE_INFO)
 
@@ -776,129 +837,72 @@ class AutocompleteGUI(tk.Frame):
                      '| Latin | Namer | Data Source | Web URL |\n'
                      '+--------------+-------------+---------+'
                      '-------+-------+-------------+---------+\n'
-                     '\n%s\n' % ('='*100)))
+                     '\n%s\n' % ('=' * 100)))
                 for each_result in result:
                     elements = '  |  '.join(each_result)
                     self.scrolled_text_5.insert('end', elements)
                     self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
 
-    def do_query(self):
-        """Command of Do Query button. Get Search result.
-        Then display the result @show_candidates().
-        """
-        final_name = self.input_box.get().strip()
-        if final_name:
-            # Latin name, there is white space in name
-            if ' ' in final_name:
-                # If latin name match keys in dictionary, it will be quick
-                # and easy.
-                if final_name in self.dict_for_all:
-                    all_candidate_list = \
-                        self.dict_for_all[final_name][0]
-                    _tmp_list = []
-                    _tmp_list.append([all_candidate_list[0]])
-                    _tmp_list.append([all_candidate_list[1]])
-                    _tmp_list.append([all_candidate_list[3]])
-                    _tmp_list.append(all_candidate_list[3])
-                    return _tmp_list
-                else:
-                    # If no exact key match in dictionary, try fuzzy match
-                    _tmp_list = []
-                    candidate_3 = self.query_object.get_similar_candidates(
-                        final_name)
-                    candidate_4 = self.query_object.get_spell_check_candidate(
-                        final_name)
-
-                return ([], [], candidate_3,
-                        candidate_4 if candidate_4 else '')
-
-            # query starts with English letters, not Chinese
-            # We can apply similarity search and spell check for only English
-            if final_name[0] in string.printable:
-                if final_name in self.dict_for_all:
-                    all_candidate_list = \
-                        self.dict_for_all[final_name][0]
-                    _tmp_list = []
-                    # Get result for Startswith / Endswith column
-                    _tmp_list.append(
-                        [all_candidate_list[0]] +
-                        self.query_object.get_starts_with_candidates(
-                            final_name))
-                    # Get result for Contains column
-                    _tmp_list.append([all_candidate_list[1]])
-                    # Get result for Similarity column
-                    _tmp_list.append([all_candidate_list[3]])
-                    # Get result for Spell Check column
-                    _tmp_list.append(all_candidate_list[3])
-                    return _tmp_list
-                else:
-                    all_candidate_list = self.query_object.\
-                        query_all_four(final_name)
-                    return all_candidate_list
+    def _do_query(self):
+        """Command of Do Query button with multi-processing"""
+        query = self.input_box.get().strip()
+        query_word_object = QueryWord(
+            self.keys_for_all, self.dict_for_all)
+        result_dict = {'0': [], '1': [], '2': [], '3': ''}
+        if query:
+            # If name match keys in dictionary, just do strategy 1 & 2
+            if query in self.dict_for_all:
+                result_dict = query_word_object. \
+                    query_all_four(
+                        query,
+                        turn_on_mode=(True, True, False, False))
+            # No exactly match
             else:
-                # Query is Chinese word
-                # No similarity check and spell check
-                try:
-                    # If query is in dictionary
-                    # Chinese name may encounter Unicode related errors
+                # Latin
+                # Dirty trick to check if query is Latin name (space between words)
+                if ' ' in query:
+                    result_dict = query_word_object. \
+                        query_all_four(
+                            query,
+                            turn_on_mode=(True, True, True, False))
+                # English
+                # query starts with English letters, not Chinese
+                # We can apply similarity search and spell check for only English
+                elif query[0] in string.printable:
+                    result_dict = query_word_object. \
+                        query_all_four(
+                            query,
+                            turn_on_mode=(True, True, True, True))
+                else:
                     # For Chinese, fuzzy search does not work.
-                    # Just try to search in dictionary
-                    all_candidate_list = \
-                        self.dict_for_all[final_name][0]
-                    _tmp_list = []
-                    _tmp_list.append(
-                        # Exactly match
-                        [all_candidate_list[0]] +
-                        # Startswith or Endswith
-                        self.query_object.get_starts_with_candidates(
-                            final_name))
-                    _tmp_list.append([all_candidate_list[1]])
-                    _tmp_list.append([all_candidate_list[3]])
-                    _tmp_list.append(all_candidate_list[3])
-                    return _tmp_list
-                except KeyError as e:
-                    _tmp_list = []
-                    _tmp_list.append(
-                        self.query_object.get_starts_with_candidates(
-                            final_name))
-                    _tmp_list.append(
-                        self.query_object.get_contains_candidates(
-                            final_name))
-                    _tmp_list.append([])
-                    _tmp_list.append('')
-                    return _tmp_list
-        else:
-            return ([], [], [], '')
+                    # No similarity check and spell check.
+                    # Chinese name may encounter Unicode related errors
+                    result_dict = query_word_object. \
+                        query_all_four(
+                            query,
+                            turn_on_mode=(True, True, True, False))
+        return result_dict
 
-    def show_candidates(self):
-        # ---------------------------
-        # Do query and get candidates
-        # ---------------------------
-        all_candidate_list = self.do_query()
-        # Get all candidates
-        result_one, result_two, result_three, result_four = all_candidate_list
-
-        # ------------------------------------------------
-        # Start show candidates in four candidate columns
-        # ------------------------------------------------
-        # listbox1
+    def show_candidates_for_multi_processing(self):
+        result_dict = self._do_query()
+        # Display outcome to candidate widget 1
         self.listbox1.delete('0', 'end')
-        for item in result_one:
+        for item in result_dict['0']:
             self.listbox1.insert('end', item)
 
-        # listbox2
+        # Display outcome to candidate widget 2
         self.listbox2.delete('0', 'end')
-        for item in result_two:
+        for item in result_dict['1']:
             self.listbox2.insert('end', item)
 
-        # listbox3
+        # Display outcome to candidate widget 3
         self.listbox3.delete('0', 'end')
-        for item in result_three:
+        for item in result_dict['2']:
             self.listbox3.insert('end', item)
 
-        # listbox4
+        # Display outcome to candidate widget 4
         self.listbox4.delete('0', 'end')
-        self.listbox4.insert('end', result_four)
+        self.listbox4.insert('end', result_dict['3'])
 
     def grid_configure(self):
         """Grid configuration of window and widgets."""
@@ -928,6 +932,9 @@ class AutocompleteGUI(tk.Frame):
         right_menu_scrolled_text_5 = RightClickMenuForScrolledText(
             self.scrolled_text_5)
         self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
+
+    def bind_func(self):
+        self.do_query_button['command'] = self.show_candidates_for_multi_processing
 
     def print_help(self):
         self.scrolled_text_5.delete("0.1", "end-1c")
