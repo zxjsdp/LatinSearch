@@ -451,6 +451,41 @@ class RightClickMenu(object):
         return True
 
 
+class RightClickMenuForListBox(object):
+    """
+    Simple widget to add basic right click menus to entry widgets.
+
+    usage:
+
+    rclickmenu = RightClickMenuForListBox(listbox_widget)
+    listbox_widget.bind("<3>", rclickmenu)
+
+    If you prefer to import Tkinter over Tix, just replace all Tix
+    references with Tkinter and this will still work fine.
+    """
+
+    def __init__(self, parent):
+        self.parent = parent
+
+    def __call__(self, event):
+        # if the entry widget is disabled do nothing.
+        if self.parent.cget('state') == 'disable':
+            return
+        # grab focus of the entry widget.  this way you can see
+        # the cursor and any marking selections
+        self.parent.focus_force()
+        self.build_menu(event)
+
+    def build_menu(self, event):
+        """Build right click menu"""
+        menu = tk.Menu(self.parent, tearoff=0)
+        menu.add_command(label="Copy", command=self._copy)
+        menu.post(event.x_root, event.y_root)
+
+    def _copy(self):
+        self.parent.event_generate("<<Copy>>")
+
+
 class RightClickMenuForScrolledText(object):
     """Simple widget to add basic right click menus to entry widgets."""
 
@@ -692,6 +727,9 @@ class AutocompleteGUI(tk.Frame):
             # Double click left mouse
             widget.bind('<Double-Button-1>',
                         lambda e: self.clean_and_insert_value(widget))
+
+            right_menu_widget = RightClickMenuForListBox(widget)
+            widget.bind("<Button-3>", right_menu_widget)
 
         for listbox in [self.listbox1, self.listbox2,
                         self.listbox3, self.listbox4]:
