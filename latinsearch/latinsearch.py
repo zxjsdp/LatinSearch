@@ -708,40 +708,41 @@ class AutocompleteGUI(tk.Frame):
         self.input_box.insert(tk.END, selection_value)
 
         self.scrolled_text_5.delete("0.1", "end-1c")
-        result = self.dict_for_all[selection_value]
-        if PrettyTable:
-            table = PrettyTable(
-                ["Short Pinyin", "Long Pinyin", 'Chinese',
-                 'Latin', 'Namer', 'Data Source', 'Web URL'])
-            for column in ('Short Pinyin', 'Long Pinyin', 'Chinese',
-                           'Latin', 'Namer', 'Data Source', 'Web URL'):
-                table.align[column] = "l"
-            table.padding_width = 1
-            for each_result in result:
-                normal_word_list = [x for x in each_result[3].split()
-                                    if x not in SPECIAL_CHARS]
-                url = (FRPS_BASE_URL + '%20'.join(normal_word_list))
-                tmp_list = [_ for _ in each_result]
-                tmp_list.append(url)
-                table.add_row(tmp_list)
+        result = self.dict_for_all.get(selection_value)
+        if result:
+            if PrettyTable:
+                table = PrettyTable(
+                    ["Short Pinyin", "Long Pinyin", 'Chinese',
+                     'Latin', 'Namer', 'Data Source', 'Web URL'])
+                for column in ('Short Pinyin', 'Long Pinyin', 'Chinese',
+                               'Latin', 'Namer', 'Data Source', 'Web URL'):
+                    table.align[column] = "l"
+                table.padding_width = 1
+                for each_result in result:
+                    normal_word_list = [x for x in each_result[3].split()
+                                        if x not in SPECIAL_CHARS]
+                    url = (FRPS_BASE_URL + '%20'.join(normal_word_list))
+                    tmp_list = [_ for _ in each_result]
+                    tmp_list.append(url)
+                    table.add_row(tmp_list)
 
-            self.scrolled_text_5.insert('end', table.get_string())
-        else:
-            self.scrolled_text_5.insert(
-                'end',
-                ('请安装 prettytable 以获得更清晰的结果视图。\n'
-                 '安装方法： pip install prettytable\n\n'
-                 '+--------------+-------------+---------'
-                 '+-------+-------+-------------+---------+\n'
-                 '| Short Pinyin | Long Pinyin | Chinese '
-                 '| Latin | Namer | Data Source | Web URL |\n'
-                 '+--------------+-------------+---------+'
-                 '-------+-------+-------------+---------+\n'
-                 '\n%s\n' % ('='*100)))
-            for each_result in result:
-                elements = '  |  '.join(each_result)
-                self.scrolled_text_5.insert('end', elements)
-                self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
+                self.scrolled_text_5.insert('end', table.get_string())
+            else:
+                self.scrolled_text_5.insert(
+                    'end',
+                    ('请安装 prettytable 以获得更清晰的结果视图。\n'
+                     '安装方法： pip install prettytable\n\n'
+                     '+--------------+-------------+---------'
+                     '+-------+-------+-------------+---------+\n'
+                     '| Short Pinyin | Long Pinyin | Chinese '
+                     '| Latin | Namer | Data Source | Web URL |\n'
+                     '+--------------+-------------+---------+'
+                     '-------+-------+-------------+---------+\n'
+                     '\n%s\n' % ('='*100)))
+                for each_result in result:
+                    elements = '  |  '.join(each_result)
+                    self.scrolled_text_5.insert('end', elements)
+                    self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
 
     def do_query(self):
         """Command of Do Query button. Get Search result.
