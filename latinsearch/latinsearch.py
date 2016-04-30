@@ -553,6 +553,7 @@ class AutocompleteGUI(tk.Frame):
         self.create_menu()
         self.create_widgets()
         self.grid_configure()
+        self.create_right_menu()
         self.master.geometry('1400x800')
         self.master.title('Latin Finder %s' % __version__)
 
@@ -878,6 +879,16 @@ class AutocompleteGUI(tk.Frame):
         self.content.columnconfigure(5, weight=0)
         self.content.columnconfigure(6, weight=1)
         self.content.columnconfigure(7, weight=0)
+
+    def create_right_menu(self):
+        # Right menu for input combobox
+        right_menu_input_box = RightClickMenu(self.input_box)
+        self.input_box.bind('<Button-3>', right_menu_input_box)
+
+        # Right menu for output area
+        right_menu_scrolled_text_5 = RightClickMenuForScrolledText(
+            self.scrolled_text_5)
+        self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
 
     def print_help(self):
         self.scrolled_text_5.delete("0.1", "end-1c")
