@@ -3,6 +3,11 @@ LatinSearch
 
 植物拉丁名搜索（LatinSearch）
 
+截图
+---
+
+![LatinSearch](resources/LatinSearch.png)
+
 介绍
 ----
 
@@ -19,14 +24,14 @@ LatinSearch
 
     - 下载最新的程序文件：[点击这里下载](https://github.com/zxjsdp/LatinSearch/archive/master.zip)
     - 解压缩
-    - 进入 `LatinSearch/pyw` 目录
+    - 进入 `LatinSearch-master/pyw` 目录
     - 双击运行：`latinsearch_latest.pyw`
 
 2. 对于 Linux & Mac OS X 用户，可以直接运行最新的 `.pyw` 文件
 
     - 下载最新的程序文件：[点击这里下载](https://github.com/zxjsdp/LatinSearch/archive/master.zip)
     - 解压缩
-    - 进入 `LatinSearch/latinsearch` 目录
+    - 进入 `LatinSearch-master/latinsearch` 目录
     - 双击运行：`latinsearch.pyw`
 
 使用方法
