@@ -346,13 +346,17 @@ class QueryWord(object):
     # --------------------------------------------------------
     @staticmethod
     def get_starts_with_candidates(query, keys_for_all, dict_for_all,
-                                   result_dict, turn_on=True):
+                                   result_dict, match_whole_word=False,
+                                   turn_on=True):
         """Check startswith & endswith"""
         _tmp_list = []
         if turn_on:
             # Check totally match. Totally matched result should be on top
             if query in keys_for_all:
                 _tmp_list.append(query)
+                if match_whole_word:
+                    result_dict.update({'0': _tmp_list})
+                    return
                 result_elements = dict_for_all.get(query)[0]
                 for each in result_elements[:4]:
                     if each.strip() and each != query:
@@ -371,13 +375,17 @@ class QueryWord(object):
     # --------------------------------------------------------
     @staticmethod
     def get_contains_candidates(query, keys_for_all, dict_for_all,
-                                result_dict, turn_on=True):
+                                result_dict, match_whole_word=False,
+                                turn_on=True):
         """Check contains"""
         _tmp_list = []
         if turn_on:
             # Check totally match. Totally matched result should be on top
             if query in keys_for_all:
                 _tmp_list.append(query)
+                if match_whole_word:
+                    result_dict.update({'1': _tmp_list})
+                    return
                 result_elements = dict_for_all.get(query)[0]
                 for each in result_elements[:4]:
                     if each.strip() and each != query:
@@ -395,12 +403,16 @@ class QueryWord(object):
     # --------------------------------------------------------
     @staticmethod
     def get_similar_candidates(query, keys_for_all, dict_for_all,
-                               result_dict, turn_on=True):
+                               result_dict, match_whole_word=False,
+                               turn_on=True):
         """Rank candidates by similarity"""
         _tmp_list = []
         _similar_hits = []
         # If strategy 2 (contains search) got a result, similarity search
         # will skip for performance reason
+        if match_whole_word:
+            result_dict.update({'2': []})
+            return
         if turn_on and len(result_dict.get('1')) == 0:
             for i, candidate in enumerate(keys_for_all):
                 _similarity = get_similarity(candidate, query)
@@ -418,16 +430,19 @@ class QueryWord(object):
     # --------------------------------------------------------
     @staticmethod
     def get_spell_check_candidate(query, keys_for_all, dict_for_all,
-                                  result_dict, turn_on=True):
+                                  result_dict, match_whole_word=False,
+                                  turn_on=True):
         """Get spell check candicates"""
         candidate = ''
+        if match_whole_word:
+            result_dict.update({'3': ''})
+            return
         if turn_on and len(result_dict.get('1')) == 0:
             candidate = TRAINED_OBJECT.correct(query)
 
         result_dict.update({'3': candidate})
 
-    def query_all_four(self, query,
-                       turn_on_mode=(True, True, True, True)):
+    def query_all_four(self, query, match_whole_word, turn_on_mode):
         """Get four results"""
         # Reset self.query to the value of parameter query
         self.query = query
@@ -438,6 +453,7 @@ class QueryWord(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # for i, each_func in enumerate(func_list):
         #     each_func(turn_on_mode[i])
+        print('query_all_four: ', turn_on_mode)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Multi-processing
@@ -451,19 +467,17 @@ class QueryWord(object):
 
         for i, each_func in enumerate(func_list_1):
             p = Process(target=each_func(self.query, self.keys_for_all,
-                                         self.dict_for_all,
-                                         result_dict, turn_on_mode[i]))
+                                         self.dict_for_all, result_dict,
+                                         match_whole_word, turn_on_mode[i]))
             p.start()
-            # p.join()
 
         # If "contains search" got results, similarity search & spell check
         # will not be performed for performance reason
         for i, each_func in enumerate(func_list_2):
             p = Process(target=each_func(self.query, self.keys_for_all,
-                                         self.dict_for_all,
-                                         result_dict, turn_on_mode[i]))
+                                         self.dict_for_all, result_dict,
+                                         match_whole_word, turn_on_mode[i+2]))
             p.start()
-            # p.join()
 
         return result_dict
 
@@ -853,9 +867,33 @@ class AutocompleteGUI(tk.Frame):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Sidebar configuration area
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        self.sidebar_label = ttk.Label(self.content,
-                                       text='Configurations',
-                                       style='config.TLabel')
+        self.config_label = ttk.Label(self.content,
+                                      text='Configurations',
+                                      style='config.TLabel')
+
+        self.turn_off_similarity_search_var = tk.IntVar()
+        self.similarity_search_checkbutton = ttk.Checkbutton(
+            self.content, text='关闭相似值搜索',
+            variable=self.turn_off_similarity_search_var,
+            onvalue=1, offvalue=0
+        )
+        self.turn_off_similarity_search_var.set(0)
+
+        self.turn_off_spell_check_var = tk.IntVar()
+        self.spell_check_checkbutton = ttk.Checkbutton(
+            self.content, text='关闭拼写检查',
+            variable=self.turn_off_spell_check_var,
+            onvalue=1, offvalue=0
+        )
+        self.turn_off_spell_check_var.set(0)
+
+        self.totally_match_var = tk.IntVar()
+        self.totally_match_checkbutton = ttk.Checkbutton(
+            self.content, text='全字匹配',
+            variable=self.totally_match_var,
+            onvalue=1, offvalue=0
+        )
+        self.totally_match_var.set(0)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Search bar & Search offline button & Search internet button
@@ -925,50 +963,57 @@ class AutocompleteGUI(tk.Frame):
         """Grid configuration of window and widgets."""
         self.master.grid()
 
-        self.sidebar_label.grid(row=0, column=0, sticky='w')
+        # 110 110 110 110
+        # |->         <-|
+        self.input_box.grid(row=0, column=0, columnspan=9, sticky='wens')
+        self.search_offline_button.grid(row=0, column=9, sticky='wens')
+        self.search_internet_button.grid(row=0, column=10, sticky='wens')
 
-        # 1 110 110 110 110
-        #   |->         <-|
-        self.input_box.grid(row=0, column=1, columnspan=9, sticky='wens')
-        self.search_offline_button.grid(row=0, column=10, sticky='wens')
-        self.search_internet_button.grid(row=0, column=11, sticky='wens')
+        # Config lines
+        # 110 110 110 110
+        # |-|
+        self.config_label.grid(row=1, rowspan=2, column=0, columnspan=2,
+                               sticky='wens')
+        self.similarity_search_checkbutton.grid(row=1, column=3, sticky='we')
+        self.spell_check_checkbutton.grid(row=2, column=3, sticky='we')
+        self.totally_match_checkbutton.grid(row=1, column=4, sticky='we')
 
-        # 1 110 110 110 110
-        #   |-|
-        self.label_1.grid(row=1, column=1, columnspan=3, sticky='ws')
-        self.listbox1.grid(row=2, column=1, columnspan=2, sticky='wens')
-        self.scrollbar1.grid(row=2, column=3, sticky='ns')
+        # 110 110 110 110
+        # |-|
+        self.label_1.grid(row=3, column=0, columnspan=3, sticky='ws')
+        self.listbox1.grid(row=4, column=0, columnspan=2, sticky='wens')
+        self.scrollbar1.grid(row=4, column=2, sticky='ns')
         self.listbox1.config(yscrollcommand=self.scrollbar1.set)
         self.scrollbar1.config(command=self.listbox1.yview)
 
-        # 1 110 110 110 110
-        #       |-|
-        self.label_2.grid(row=1, column=4, columnspan=3, sticky='w')
-        self.listbox2.grid(row=2, column=4, columnspan=2, sticky='wens')
-        self.scrollbar2.grid(row=2, column=6, sticky='ns')
+        # 110 110 110 110
+        #     |-|
+        self.label_2.grid(row=3, column=3, columnspan=3, sticky='w')
+        self.listbox2.grid(row=4, column=3, columnspan=2, sticky='wens')
+        self.scrollbar2.grid(row=4, column=5, sticky='ns')
         self.listbox2.config(yscrollcommand=self.scrollbar2.set)
         self.scrollbar2.config(command=self.listbox2.yview)
 
-        # 1 110 110 110 110
-        #           |-|
-        self.label_3.grid(row=1, column=7, columnspan=3, sticky='w')
-        self.listbox3.grid(row=2, column=7, columnspan=2, sticky='wens')
-        self.scrollbar3.grid(row=2, column=9, sticky='ns')
+        # 110 110 110 110
+        #         |-|
+        self.label_3.grid(row=3, column=6, columnspan=3, sticky='w')
+        self.listbox3.grid(row=4, column=6, columnspan=2, sticky='wens')
+        self.scrollbar3.grid(row=4, column=8, sticky='ns')
         self.listbox3.config(yscrollcommand=self.scrollbar3.set)
         self.scrollbar3.config(command=self.listbox3.yview)
 
-        # 1 110 110 110 110
-        #               |-|
-        self.label_4.grid(row=1, column=10, columnspan=3, sticky='w')
-        self.listbox4.grid(row=2, column=10, columnspan=2, sticky='wens')
-        self.scrollbar4.grid(row=2, column=12, sticky='ns')
+        # 110 110 110 110
+        #             |-|
+        self.label_4.grid(row=3, column=9, columnspan=3, sticky='w')
+        self.listbox4.grid(row=4, column=9, columnspan=2, sticky='wens')
+        self.scrollbar4.grid(row=4, column=11, sticky='ns')
         self.listbox4.config(yscrollcommand=self.scrollbar4.set)
         self.scrollbar4.config(command=self.listbox4.yview)
 
-        # 1 110 110 110 110
-        #   |->         <-|
-        self.label_5.grid(row=3, column=1, columnspan=12, sticky='w')
-        self.scrolled_text_5.grid(row=4, column=1, columnspan=12,
+        # 110 110 110 110
+        # |->         <-|
+        self.label_5.grid(row=5, column=0, columnspan=12, sticky='w')
+        self.scrolled_text_5.grid(row=6, column=0, columnspan=12,
                                   sticky='wens')
 
     def row_and_column_configure(self):
@@ -976,27 +1021,32 @@ class AutocompleteGUI(tk.Frame):
         self.master.rowconfigure(0, weight=1)
         self.master.columnconfigure(0, weight=1)
 
+        # Search bar
         self.content.rowconfigure(0, weight=0)
+        # Config lines
         self.content.rowconfigure(1, weight=0)
-        self.content.rowconfigure(2, weight=1)
+        self.content.rowconfigure(2, weight=0)
+        # listboxes
         self.content.rowconfigure(3, weight=0)
         self.content.rowconfigure(4, weight=1)
+        # Result ScrolledText area
+        self.content.rowconfigure(5, weight=0)
+        self.content.rowconfigure(6, weight=1)
 
-        # config   listbox1  listbox2  listbox3  listbox4
-        #    1       110        110      110       110
+        # listbox1  listbox2  listbox3  listbox4
+        #   110        110      110       110
         self.content.columnconfigure(0, weight=1)
         self.content.columnconfigure(1, weight=1)
-        self.content.columnconfigure(2, weight=1)
-        self.content.columnconfigure(3, weight=0)
+        self.content.columnconfigure(2, weight=0)
+        self.content.columnconfigure(3, weight=1)
         self.content.columnconfigure(4, weight=1)
-        self.content.columnconfigure(5, weight=1)
-        self.content.columnconfigure(6, weight=0)
+        self.content.columnconfigure(5, weight=0)
+        self.content.columnconfigure(6, weight=1)
         self.content.columnconfigure(7, weight=1)
-        self.content.columnconfigure(8, weight=1)
-        self.content.columnconfigure(9, weight=0)
+        self.content.columnconfigure(8, weight=0)
+        self.content.columnconfigure(9, weight=1)
         self.content.columnconfigure(10, weight=1)
-        self.content.columnconfigure(11, weight=1)
-        self.content.columnconfigure(12, weight=0)
+        self.content.columnconfigure(11, weight=0)
 
     def create_right_menu(self):
         # Right menu for input combobox
@@ -1046,38 +1096,43 @@ class AutocompleteGUI(tk.Frame):
         query_word_object = QueryWord(
             self.keys_for_all, self.dict_for_all)
         result_dict = {'0': [], '1': [], '2': [], '3': ''}
+        match_whole_word = self.totally_match_var.get()
         if query:
             # If name match keys in dictionary, just do strategy 1 & 2
             if query in self.dict_for_all:
-                result_dict = query_word_object. \
-                    query_all_four(
-                        query,
-                        turn_on_mode=(True, True, False, False))
+                turn_on_mode = [True, True, False, False]
+                result_dict = query_word_object.query_all_four(
+                    query, match_whole_word, turn_on_mode)
             # No exactly match
             else:
                 # Latin
                 # Dirty trick to check if query is Latin name (space between words)
                 if ' ' in query:
-                    result_dict = query_word_object. \
-                        query_all_four(
-                            query,
-                            turn_on_mode=(True, True, True, False))
+                    turn_on_mode = [True, True, True, False]
+                    if self.turn_off_similarity_search_var.get():
+                        turn_on_mode[2] = False
+                    result_dict = query_word_object.query_all_four(
+                        query, match_whole_word, turn_on_mode)
                 # English
                 # query starts with English letters, not Chinese
                 # We can apply similarity search and spell check for only English
                 elif query[0] in string.printable:
-                    result_dict = query_word_object. \
-                        query_all_four(
-                            query,
-                            turn_on_mode=(True, True, True, True))
+                    turn_on_mode = [True, True, True, True]
+                    if self.turn_off_similarity_search_var.get():
+                        turn_on_mode[2] = False
+                    if self.turn_off_spell_check_var.get():
+                        turn_on_mode[3] = False
+                    result_dict = query_word_object.query_all_four(
+                        query, match_whole_word, turn_on_mode)
                 else:
                     # For Chinese, fuzzy search does not work.
                     # No similarity check and spell check.
                     # Chinese name may encounter Unicode related errors
-                    result_dict = query_word_object. \
-                        query_all_four(
-                            query,
-                            turn_on_mode=(True, True, True, False))
+                    turn_on_mode = [True, True, True, False]
+                    if self.turn_off_similarity_search_var.get():
+                        turn_on_mode[2] = False
+                    result_dict = query_word_object.query_all_four(
+                        query, match_whole_word, turn_on_mode)
         return result_dict
 
     def _query_baidu_baike(self):
