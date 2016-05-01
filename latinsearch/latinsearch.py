@@ -96,6 +96,15 @@ USAGE_INFO = """
 
 """ % __version__
 
+ABOUT_INFO = """
+============================================================
+软件名称：植物拉丁名搜索（Latin Namer Finer）
+软件版本：%s
+软件作者：%s
+使用方法：请点击菜单栏中 "Help" - "Help" 以查看使用方式。
+============================================================
+""" % (__version__, __author__)
+
 
 def get_lines(file_name):
     """Read file and return a list of lines."""
@@ -683,7 +692,7 @@ class AutocompleteGUI(tk.Frame):
         self.history = []
         self.master.grid()
         self.set_style()
-        self.create_menu()
+        self.create_menu_bar()
         self.create_widgets()
         self.grid_configure()
         self.create_right_menu()
@@ -699,24 +708,51 @@ class AutocompleteGUI(tk.Frame):
         s.configure('TButton', padding=(10))
         s.configure('open.TButton', foreground='blue')
 
-    def create_menu(self):
+    def create_menu_bar(self):
         """Create menubar for the main window."""
         self.menubar = tk.Menu(self.master)
 
+        # ~~~~~~~~~~~~~~~~~~~~~~
+        # File Menu
+        # ~~~~~~~~~~~~~~~~~~~~~~
         self.file_menu = tk.Menu(self.menubar, tearoff=0)
         self.file_menu.add_command(
-            label='Open',
-            # command=reload_GUI_with_new_list
+            label='Save result to file...',
+            command=self._ask_save_file
         )
+        self.file_menu.add_separator()
         self.file_menu.add_command(
             label='Exit',
             command=self.master.quit)
         self.menubar.add_cascade(label='File', menu=self.file_menu)
 
+        # ~~~~~~~~~~~~~~~~~~~~~~
+        # Edit Menu
+        # ~~~~~~~~~~~~~~~~~~~~~~
+        edit_menu = tk.Menu(self.menubar, tearoff=0)
+        edit_menu.add_command(label="Copy", command=self._copy)
+        edit_menu.add_command(label="Cut", command=self._cut)
+        # try:
+        #     edit_menu.add_command(label="Paste", command=self._paste)
+        # except Exception:
+        #     pass
+        if self._paste_string_state():
+            edit_menu.add_command(label="Paste", command=self._paste)
+        else:
+            edit_menu.add_command(
+                label='Paste',
+                command=lambda: print('No string in clipboard!'))
+        edit_menu.add_command(label="Delete", command=self._delete)
+        self.menubar.add_cascade(label="Edit", menu=edit_menu)
+
+        # ~~~~~~~~~~~~~~~~~~~~~~
+        # About Menu
+        # ~~~~~~~~~~~~~~~~~~~~~~
         self.help_menu = tk.Menu(self.menubar, tearoff=0)
         self.help_menu.add_command(
             label='Help',
-            command=lambda: self.print_help)
+            command=self._display_help)
+        self.help_menu.add_command(label="About", command=self._display_about)
         self.menubar.add_cascade(label='Help', menu=self.help_menu)
 
         self.master.config(menu=self.menubar)
@@ -809,8 +845,7 @@ class AutocompleteGUI(tk.Frame):
         self.label_5.grid(row=3, column=0, columnspan=7, sticky=(tk.W))
         self.scrolled_text_5.grid(row=4, column=0, columnspan=7,
                                   sticky=(tk.N + tk.S + tk.W + tk.E))
-        self.scrolled_text_5.delete("0.1", "end-1c")
-        self.scrolled_text_5.insert('end', USAGE_INFO)
+        self._display_help()
 
         def bind_command_to_listbox(widget):
             """Bind command to listbox.
@@ -820,11 +855,11 @@ class AutocompleteGUI(tk.Frame):
             """
             # Single click left mouse
             # widget.bind('<Button-1>',
-            #             lambda e: self.clean_and_insert_value(widget))
+            #             lambda e: self._display_search_result(widget))
 
             # Double click left mouse
             widget.bind('<Double-Button-1>',
-                        lambda e: self.clean_and_insert_value(widget))
+                        lambda e: self._display_search_result(widget))
 
             right_menu_widget = RightClickMenuForListBox(widget)
             widget.bind("<Button-3>", right_menu_widget)
@@ -863,13 +898,74 @@ class AutocompleteGUI(tk.Frame):
         self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
 
     def bind_func(self):
-        self.do_query_button['command'] = self.show_candidates_for_multi_processing
+        self.do_query_button['command'] = self._display_candidates
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Functional methods
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def clean_and_insert_value(self, widget, is_clean_word=True):
+    def _do_query(self):
+        """Command of Do Query button with multi-processing"""
+        query = self.input_box.get().strip()
+        query_word_object = QueryWord(
+            self.keys_for_all, self.dict_for_all)
+        result_dict = {'0': [], '1': [], '2': [], '3': ''}
+        if query:
+            # If name match keys in dictionary, just do strategy 1 & 2
+            if query in self.dict_for_all:
+                result_dict = query_word_object. \
+                    query_all_four(
+                        query,
+                        turn_on_mode=(True, True, False, False))
+            # No exactly match
+            else:
+                # Latin
+                # Dirty trick to check if query is Latin name (space between words)
+                if ' ' in query:
+                    result_dict = query_word_object. \
+                        query_all_four(
+                            query,
+                            turn_on_mode=(True, True, True, False))
+                # English
+                # query starts with English letters, not Chinese
+                # We can apply similarity search and spell check for only English
+                elif query[0] in string.printable:
+                    result_dict = query_word_object. \
+                        query_all_four(
+                            query,
+                            turn_on_mode=(True, True, True, True))
+                else:
+                    # For Chinese, fuzzy search does not work.
+                    # No similarity check and spell check.
+                    # Chinese name may encounter Unicode related errors
+                    result_dict = query_word_object. \
+                        query_all_four(
+                            query,
+                            turn_on_mode=(True, True, True, False))
+        return result_dict
+
+    def _display_candidates(self):
+        result_dict = self._do_query()
+        # Display outcome to candidate widget 1
+        self.listbox1.delete('0', 'end')
+        for item in result_dict['0']:
+            self.listbox1.insert('end', item)
+
+        # Display outcome to candidate widget 2
+        self.listbox2.delete('0', 'end')
+        for item in result_dict['1']:
+            self.listbox2.insert('end', item)
+
+        # Display outcome to candidate widget 3
+        self.listbox3.delete('0', 'end')
+        for item in result_dict['2']:
+            self.listbox3.insert('end', item)
+
+        # Display outcome to candidate widget 4
+        self.listbox4.delete('0', 'end')
+        self.listbox4.insert('end', result_dict['3'])
+
+    def _display_search_result(self, widget, is_clean_word=True):
         """Clean content in Output Area and insert new value."""
         # Listbox index must be: active, anchor, end, @x,y, or a number
         selection_value = widget.get('active')
@@ -916,70 +1012,52 @@ class AutocompleteGUI(tk.Frame):
                     self.scrolled_text_5.insert('end', elements)
                     self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
 
-    def _do_query(self):
-        """Command of Do Query button with multi-processing"""
-        query = self.input_box.get().strip()
-        query_word_object = QueryWord(
-            self.keys_for_all, self.dict_for_all)
-        result_dict = {'0': [], '1': [], '2': [], '3': ''}
-        if query:
-            # If name match keys in dictionary, just do strategy 1 & 2
-            if query in self.dict_for_all:
-                result_dict = query_word_object. \
-                    query_all_four(
-                        query,
-                        turn_on_mode=(True, True, False, False))
-            # No exactly match
-            else:
-                # Latin
-                # Dirty trick to check if query is Latin name (space between words)
-                if ' ' in query:
-                    result_dict = query_word_object. \
-                        query_all_four(
-                            query,
-                            turn_on_mode=(True, True, True, False))
-                # English
-                # query starts with English letters, not Chinese
-                # We can apply similarity search and spell check for only English
-                elif query[0] in string.printable:
-                    result_dict = query_word_object. \
-                        query_all_four(
-                            query,
-                            turn_on_mode=(True, True, True, True))
-                else:
-                    # For Chinese, fuzzy search does not work.
-                    # No similarity check and spell check.
-                    # Chinese name may encounter Unicode related errors
-                    result_dict = query_word_object. \
-                        query_all_four(
-                            query,
-                            turn_on_mode=(True, True, True, False))
-        return result_dict
+    def _copy(self):
+        # self.master.clipboard_clear()
+        # self.master.clipboard_append(self.master.focus_get().selection_get())
+        self.master.focus_get().event_generate("<<Copy>>")
 
-    def show_candidates_for_multi_processing(self):
-        result_dict = self._do_query()
-        # Display outcome to candidate widget 1
-        self.listbox1.delete('0', 'end')
-        for item in result_dict['0']:
-            self.listbox1.insert('end', item)
+    def _cut(self):
+        # self.master.clipboard_clear()
+        # self.master.clipboard_append(self.master.focus_get().selection_get())
+        # # self.master.focus_get().selection_clear()
+        self.master.focus_get().event_generate("<<Cut>>")
 
-        # Display outcome to candidate widget 2
-        self.listbox2.delete('0', 'end')
-        for item in result_dict['1']:
-            self.listbox2.insert('end', item)
+    def _paste(self):
+        # print(self.master.selection_get(selection='CLIPBOARD'))
+        self.master.focus_get().event_generate("<<Paste>>")
 
-        # Display outcome to candidate widget 3
-        self.listbox3.delete('0', 'end')
-        for item in result_dict['2']:
-            self.listbox3.insert('end', item)
+    def _delete(self):
+        self.master.focus_get().event_generate("<<Clear>>")
 
-        # Display outcome to candidate widget 4
-        self.listbox4.delete('0', 'end')
-        self.listbox4.insert('end', result_dict['3'])
+    def _paste_string_state(self):
+        """Returns true if a string is in the clipboard"""
+        try:
+            # this assignment will raise an exception if the data
+            # in the clipboard isn't a string (such as a picture).
+            # in which case we want to know about it so that the Paste
+            # option can be appropriately set normal or disabled.
+            clipboard = self.master.selection_get(selection='CLIPBOARD')
+        except:
+            return False
+        return True
 
-    def print_help(self):
+    def _ask_save_file(self):
+        """Dialog to open file."""
+        f = tkFileDialog.asksaveasfile(mode='w', defaultextension=".txt")
+        if f is None:
+            return
+        text_to_save = self.scrolled_text_5.get('1.0', 'end-1c').encode('GBK')
+        f.write(text_to_save.decode('GBK').encode('utf-8'))
+        f.close()
+
+    def _display_help(self):
         self.scrolled_text_5.delete("0.1", "end-1c")
         self.scrolled_text_5.insert('end', USAGE_INFO)
+
+    def _display_about(self):
+        self.scrolled_text_5.delete('0.1', 'end-1c')
+        self.scrolled_text_5.insert('end', ABOUT_INFO)
 
 
 def dump_with_pickle(keys_for_all, dict_for_all):
