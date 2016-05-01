@@ -10,7 +10,10 @@ import os
 import re
 import sys
 import urllib
+from threading import Thread
+
 import requests
+import time
 from bs4 import BeautifulSoup
 
 try:
@@ -452,7 +455,7 @@ class QueryWord(object):
                                          self.dict_for_all,
                                          result_dict, turn_on_mode[i]))
             p.start()
-            p.join()
+            # p.join()
 
         # If "contains search" got results, similarity search & spell check
         # will not be performed for performance reason
@@ -461,7 +464,7 @@ class QueryWord(object):
                                          self.dict_for_all,
                                          result_dict, turn_on_mode[i]))
             p.start()
-            p.join()
+            # p.join()
 
         return result_dict
 
@@ -489,7 +492,7 @@ class InternetQuery(object):
         return ''
 
     @staticmethod
-    def _prettify_baike_result(baike_result):
+    def prettify_baike_result(baike_result):
         out_list = []
         lines = [x.strip() for x in baike_result.splitlines() if x.strip()]
         temp_str = ''
@@ -1045,13 +1048,38 @@ class AutocompleteGUI(tk.Frame):
         if not keyword:
             return ''
         # self._set_status_label('正在搜索百度百科，请稍候...')
-        baike_result = InternetQuery._prettify_baike_result(
+        baike_result = InternetQuery.prettify_baike_result(
             InternetQuery.search_baidu_baike(keyword))
+        baike_result = '百度百科：\n\n%s\n\n\n\n' % baike_result
         self._insert_to_text_area(self.scrolled_text_5, baike_result)
         # self._set_status_label('百度百科搜索完成！')
 
     def _query_wikipedia(self):
-        pass
+        keyword = self.input_box.get().strip()
+        if not keyword:
+            return ''
+        # self._set_status_label('正在搜索维基百科，请稍候...')
+        wikipedia_result = InternetQuery.search_wikipedia(keyword)
+        wikipedia_result = '维基百科：\n\n%s\n\n\n\n' % wikipedia_result
+        self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
+        # self._set_status_label('维基百科搜索完成！')
+
+    def _query_internet_multithreading(self):
+        func_list = [self._query_baidu_baike,
+                     self._query_wikipedia]
+
+        # self._set_status_label('开始搜索，请耐性等待...')
+        print('开始搜索，请耐性等待...')
+        self.scrolled_text_5.delete('1.0', 'end-1c')
+        self.scrolled_text_5.update_idletasks()
+        for i, each_func in enumerate(func_list):
+            print('start: ', i)
+            thread = Thread(target=each_func)
+            thread.setDaemon(True)
+            thread.start()
+            # thread.join()
+            time.sleep(0.1)
+        # self._set_status_label('搜索完成！')
 
     def _display_candidates(self):
         result_dict = self._query_offline_data()
@@ -1104,6 +1132,8 @@ class AutocompleteGUI(tk.Frame):
                     table.add_row(tmp_list)
 
                 self.scrolled_text_5.insert('end', table.get_string())
+                self.scrolled_text_5.see(tk.END)
+                self.scrolled_text_5.update_idletasks()
             else:
                 self.scrolled_text_5.insert(
                     'end',
@@ -1120,12 +1150,16 @@ class AutocompleteGUI(tk.Frame):
                     elements = '  |  '.join(each_result)
                     self.scrolled_text_5.insert('end', elements)
                     self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
+                    # self.scrolled_text_5.see(tk.END)
+                    # self.scrolled_text_5.update_idletasks()
 
     @staticmethod
     def _insert_to_text_area(st_widget, content):
         """Clear original content from ScrolledText area and insert new"""
         st_widget.delete('1.0', 'end')
         st_widget.insert('end', content)
+        # st_widget.see(tk.END)
+        st_widget.update_idletasks()
 
     def _copy(self):
         # self.master.clipboard_clear()
