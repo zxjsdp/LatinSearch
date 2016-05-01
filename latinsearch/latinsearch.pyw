@@ -16,8 +16,7 @@ except ImportError:
 import string
 import collections
 from difflib import SequenceMatcher
-from multiprocessing import Pool
-from multiprocessing import Process, Value, Lock
+from multiprocessing import Process
 
 try:
     from prettytable import PrettyTable
@@ -687,18 +686,23 @@ class AutocompleteGUI(tk.Frame):
 
     def __init__(self, master=None, keys_for_all=[], dict_for_all={}):
         tk.Frame.__init__(self, master)
+        # Data
         self.keys_for_all = keys_for_all
         self.dict_for_all = dict_for_all
         self.history = []
-        self.master.grid()
+
+        # GUI
+        self.master.geometry('1400x800')
+        self.master.title('Latin Finder %s' % __version__)
         self.set_style()
         self.create_menu_bar()
         self.create_widgets()
         self.grid_configure()
+        self.row_and_column_configure()
         self.create_right_menu()
+
+        # Func
         self.bind_func()
-        self.master.geometry('1400x800')
-        self.master.title('Latin Finder %s' % __version__)
 
     def set_style(self):
         """Set style for widgets in the main window."""
@@ -762,6 +766,22 @@ class AutocompleteGUI(tk.Frame):
         self.content = ttk.Frame(self.master, padding=(8))
         self.content.grid(row=0, column=0, sticky=(tk.W + tk.E + tk.N + tk.S))
 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Search bar & Search offline button & Search internet button
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self.input_box = ttk.Combobox(
+            self.content,
+            style='auto.TCombobox')
+        self.input_box.focus()
+
+        self.do_query_button = ttk.Button(
+            self.content,
+            text='Do Query',
+            style='copy.TButton')
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Four labels & Four candidate listboxes
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self.label_1 = ttk.Label(self.content,
                                  text='Candidates (Startswith / Endswith)')
         self.listbox1 = tk.Listbox(self.content, font=('Monospace', 10))
@@ -783,6 +803,9 @@ class AutocompleteGUI(tk.Frame):
         self.listbox4 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar4 = ttk.Scrollbar(self.content)
 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Result label & Result ScrolledText area
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self.label_5 = ttk.Label(
             self.content,
             text=('Click "Do Query" button and see results. '
@@ -790,33 +813,14 @@ class AutocompleteGUI(tk.Frame):
         self.scrolled_text_5 = st.ScrolledText(self.content,
                                                font=('Monospace', 10))
 
-        self.input_box = ttk.Combobox(
-            self.content,
-            style='auto.TCombobox')
+        self._display_help()
+
+    def grid_configure(self):
+        """Grid configuration of window and widgets."""
+        self.master.grid()
 
         self.input_box.grid(row=0, column=0, columnspan=6, sticky=(tk.W + tk.E))
-        self.input_box.focus()
-
-        # self.open_file_button = ttk.Button(
-        #     self.content,
-        #     text='Open Tree File',
-        #     # command=reload_GUI_with_new_list,
-        #     style='open.TButton')
-        # self.open_file_button.grid(
-        #     row=0,
-        #     column=0,
-        #     columnspan=2,
-        #     sticky=(tk.W+tk.E))
-
-        self.do_query_button = ttk.Button(
-            self.content,
-            text='Do Query',
-            style='copy.TButton')
-        self.do_query_button.grid(
-            row=0,
-            column=6,
-            columnspan=2,
-            sticky=(tk.W))
+        self.do_query_button.grid(row=0, column=6, columnspan=2, sticky='w')
 
         self.label_1.grid(row=1, column=0, columnspan=2, sticky=(tk.W))
         self.listbox1.grid(row=2, column=0, sticky=(tk.W + tk.E + tk.N + tk.S))
@@ -845,31 +849,9 @@ class AutocompleteGUI(tk.Frame):
         self.label_5.grid(row=3, column=0, columnspan=7, sticky=(tk.W))
         self.scrolled_text_5.grid(row=4, column=0, columnspan=7,
                                   sticky=(tk.N + tk.S + tk.W + tk.E))
-        self._display_help()
 
-        def bind_command_to_listbox(widget):
-            """Bind command to listbox.
-
-            Double click on candidates from any column from the four,
-            then the result will be on the output area.
-            """
-            # Single click left mouse
-            # widget.bind('<Button-1>',
-            #             lambda e: self._display_search_result(widget))
-
-            # Double click left mouse
-            widget.bind('<Double-Button-1>',
-                        lambda e: self._display_search_result(widget))
-
-            right_menu_widget = RightClickMenuForListBox(widget)
-            widget.bind("<Button-3>", right_menu_widget)
-
-        for listbox in [self.listbox1, self.listbox2,
-                        self.listbox3, self.listbox4]:
-            bind_command_to_listbox(listbox)
-
-    def grid_configure(self):
-        """Grid configuration of window and widgets."""
+    def row_and_column_configure(self):
+        """Rows and columns configuration"""
         self.master.rowconfigure(0, weight=1)
         self.master.columnconfigure(0, weight=1)
 
@@ -900,11 +882,32 @@ class AutocompleteGUI(tk.Frame):
     def bind_func(self):
         self.do_query_button['command'] = self._display_candidates
 
+        def bind_command_to_listbox(widget):
+            """Bind command to listbox.
+
+            Double click on candidates from any column from the four,
+            then the result will be on the output area.
+            """
+            # Single click left mouse
+            # widget.bind('<Button-1>',
+            #             lambda e: self._display_search_result(widget))
+
+            # Double click left mouse
+            widget.bind('<Double-Button-1>',
+                        lambda e: self._display_search_result(widget))
+
+            right_menu_widget = RightClickMenuForListBox(widget)
+            widget.bind("<Button-3>", right_menu_widget)
+
+        for listbox in [self.listbox1, self.listbox2,
+                        self.listbox3, self.listbox4]:
+            bind_command_to_listbox(listbox)
+
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Functional methods
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    def _do_query(self):
+    def _query_offline_data(self):
         """Command of Do Query button with multi-processing"""
         query = self.input_box.get().strip()
         query_word_object = QueryWord(
@@ -945,7 +948,7 @@ class AutocompleteGUI(tk.Frame):
         return result_dict
 
     def _display_candidates(self):
-        result_dict = self._do_query()
+        result_dict = self._query_offline_data()
         # Display outcome to candidate widget 1
         self.listbox1.delete('0', 'end')
         for item in result_dict['0']:
