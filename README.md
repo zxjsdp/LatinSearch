@@ -10,6 +10,25 @@ LatinSearch
 
 得到候选词后，**双击** 候选词，将得到详细信息。如果没有匹配，将会使用糢糊搜索。
 
+下载
+---
+
+1. 对于 Windows 用户，推荐使用已编译为字节码并更改扩展名（这样运行时不会出现 console）的 pyw 文件：
+
+    对于配置较差的电脑，这将显著提升软件打开的速度。
+
+    - 下载最新的程序文件：[点击这里下载](https://github.com/zxjsdp/LatinSearch/archive/master.zip)
+    - 解压缩
+    - 进入 `LatinSearch/pyw` 目录
+    - 双击运行：`latinsearch_latest.pyw`
+
+2. 对于 Linux & Mac OS X 用户，可以直接运行最新的 `.pyw` 文件
+
+    - 下载最新的程序文件：[点击这里下载](https://github.com/zxjsdp/LatinSearch/archive/master.zip)
+    - 解压缩
+    - 进入 `LatinSearch/latinsearch` 目录
+    - 双击运行：`latinsearch.pyw`
+
 使用方法
 -------
 
