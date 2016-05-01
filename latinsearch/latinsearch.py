@@ -1,10 +1,10 @@
 #!/usr/bin/env pythonw
 # -*- coding: utf-8 -*-
 
+"""Latin Search program"""
+
 from __future__ import (print_function, unicode_literals,
                         with_statement)
-
-"""Latin Search program"""
 
 import os
 import sys
@@ -34,6 +34,7 @@ elif sys.version[0] == '3':
     import tkinter.scrolledtext as st
     from tkinter import filedialog as tkFileDialog
 
+
 __version__ = "v0.1.0"
 __author__ = 'Jin'
 
@@ -55,6 +56,7 @@ SIMILARITY_THRESHOLD = 0.3
 # 拉丁名中的特殊字符
 SPECIAL_CHARS = ['×', '〔', '）', '【', '】', '', '', '<', '>',
                  '*', '[', '@', ']', '［', '|']
+TRAINED_OBJECT = object()
 
 USAGE_INFO = """
 植物拉丁名搜索（Latin Namer Finer）
@@ -268,6 +270,9 @@ class SpellCheck(object):
         return max(candidates, key=lambda w: self.NWORDS_lower[w])
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Query class for easy organizing
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class QueryWord(object):
     """Query with 4 strategy with multi-processing.
 
@@ -317,53 +322,66 @@ class QueryWord(object):
     # --------------------------------------------------------
     # 1:  Startswith or Endswith Check
     # --------------------------------------------------------
-    def get_starts_with_candidates(self, turn_on=True):
+    @staticmethod
+    def get_starts_with_candidates(query, keys_for_all, dict_for_all,
+                                   result_dict, turn_on=True):
         """Check startswith & endswith"""
         _tmp_list = []
         if turn_on:
             # Check totally match. Totally matched result should be on top
-            if self.query in self.keys_for_all:
-                _tmp_list.append(self.query)
+            if query in keys_for_all:
+                _tmp_list.append(query)
+                result_elements = dict_for_all.get(query)[0]
+                for each in result_elements[:4]:
+                    if each.strip() and each != query:
+                        _tmp_list.append(each)
             # Check partially match
-            for i, candidate in enumerate(self.keys_for_all):
-                if candidate.startswith(self.query) or \
-                        candidate.endswith(self.query):
-                    if candidate != self.query:
+            for i, candidate in enumerate(keys_for_all):
+                if candidate.startswith(query) or \
+                        candidate.endswith(query):
+                    if candidate != query:
                         _tmp_list.append(candidate)
 
-        self.result_dict.update({'0': _tmp_list})
+        result_dict.update({'0': _tmp_list})
 
     # --------------------------------------------------------
     # 2:  Contains Check
     # --------------------------------------------------------
-    def get_contains_candidates(self, turn_on=True):
+    @staticmethod
+    def get_contains_candidates(query, keys_for_all, dict_for_all,
+                                result_dict, turn_on=True):
         """Check contains"""
         _tmp_list = []
         if turn_on:
             # Check totally match. Totally matched result should be on top
-            if self.query in self.keys_for_all:
-                _tmp_list.append(self.query)
+            if query in keys_for_all:
+                _tmp_list.append(query)
+                result_elements = dict_for_all.get(query)[0]
+                for each in result_elements[:4]:
+                    if each.strip() and each != query:
+                        _tmp_list.append(each)
             # Check partially match
-            for i, candidate in enumerate(self.keys_for_all):
-                if self.query in candidate:
-                    if candidate != self.query:
+            for i, candidate in enumerate(keys_for_all):
+                if query in candidate:
+                    if candidate != query:
                         _tmp_list.append(candidate)
 
-        self.result_dict.update({'1': _tmp_list})
+        result_dict.update({'1': _tmp_list})
 
     # --------------------------------------------------------
     # 3:  Similarity Check
     # --------------------------------------------------------
-    def get_similar_candidates(self, turn_on=True):
+    @staticmethod
+    def get_similar_candidates(query, keys_for_all, dict_for_all,
+                               result_dict, turn_on=True):
         """Rank candidates by similarity"""
         _tmp_list = []
         _similar_hits = []
         # If strategy 2 (contains search) got a result, similarity search
         # will skip for performance reason
-        if turn_on and not len(self.result_dict.get('1')) > 0:
-            for i, candidate in enumerate(self.keys_for_all):
-                _similarity = get_similarity(candidate,
-                                             self.query)
+        if turn_on and len(result_dict.get('1')) == 0:
+            for i, candidate in enumerate(keys_for_all):
+                _similarity = get_similarity(candidate, query)
                 if _similarity > SIMILARITY_THRESHOLD:
                     _tmp_list.append((_similarity, candidate))
             _tmp_list.sort(key=lambda x: x[0], reverse=True)
@@ -371,42 +389,61 @@ class QueryWord(object):
             _similar_hits = [_[1] for _ in _tmp_list] if _tmp_list else []
             # _similar_hits = ['%.4f  %s' % _ for _ in _tmp_list]
 
-        self.result_dict.update({'2': _similar_hits})
+        result_dict.update({'2': _similar_hits})
 
     # --------------------------------------------------------
     # 4:  Advanced Spell Check
     # --------------------------------------------------------
-    def get_spell_check_candidate(self, turn_on=True):
+    @staticmethod
+    def get_spell_check_candidate(query, keys_for_all, dict_for_all,
+                                  result_dict, turn_on=True):
         """Get spell check candicates"""
         candidate = ''
-        if turn_on:
-            candidate = self.trained_object.correct(self.query)
+        if turn_on and len(result_dict.get('1')) == 0:
+            candidate = TRAINED_OBJECT.correct(query)
 
-        self.result_dict.update({'3': candidate})
+        result_dict.update({'3': candidate})
 
     def query_all_four(self, query,
                        turn_on_mode=(True, True, True, True)):
         """Get four results"""
         # Reset self.query to the value of parameter query
         self.query = query
-        func_list = [self.get_starts_with_candidates,
-                     self.get_contains_candidates,
-                     self.get_similar_candidates,
-                     self.get_spell_check_candidate]
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # Multi-processing
-        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        # for i, each_func in enumerate(func_list):
-        #     print('Start: %d' % i)
-        #     Process(target=each_func, args=(turn_on_mode[i],)).start()
+        result_dict = {}
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Single process
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        for i, each_func in enumerate(func_list):
-            each_func(turn_on_mode[i])
+        # for i, each_func in enumerate(func_list):
+        #     each_func(turn_on_mode[i])
 
-        return self.result_dict
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Multi-processing
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # startswith/endswith and contains
+        func_list_1 = [QueryWord.get_starts_with_candidates,
+                       QueryWord.get_contains_candidates]
+        # similarity and spell check
+        func_list_2 = [QueryWord.get_similar_candidates,
+                       QueryWord.get_spell_check_candidate]
+
+        for i, each_func in enumerate(func_list_1):
+            p = Process(target=each_func(self.query, self.keys_for_all,
+                                         self.dict_for_all,
+                                         result_dict, turn_on_mode[i]))
+            p.start()
+            p.join()
+
+        # If "contains search" got results, similarity search & spell check
+        # will not be performed for performance reason
+        for i, each_func in enumerate(func_list_2):
+            p = Process(target=each_func(self.query, self.keys_for_all,
+                                         self.dict_for_all,
+                                         result_dict, turn_on_mode[i]))
+            p.start()
+            p.join()
+
+        return result_dict
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -976,6 +1013,8 @@ def gui_main():
     # Read from pickle file
     keys_for_all, dict_for_all = load_with_pickle(PICKLE_KEYS_FILE,
                                                   PICKLE_DICT_FILE)
+    global TRAINED_OBJECT
+    TRAINED_OBJECT = SpellCheck(keys_for_all)
     app = AutocompleteGUI(keys_for_all=keys_for_all,
                           dict_for_all=dict_for_all)
     app.mainloop()
