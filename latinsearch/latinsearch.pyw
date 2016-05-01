@@ -9,11 +9,10 @@ from __future__ import (print_function, unicode_literals,
 import os
 import re
 import sys
-import urllib
-from threading import Thread
-
-import requests
 import time
+import urllib
+import requests
+from threading import Thread
 from bs4 import BeautifulSoup
 
 try:
@@ -1087,11 +1086,18 @@ class AutocompleteGUI(tk.Frame):
             self.status_label_value.set('空的查询！')
             return ''
         self.status_label_value.set('正在搜索百度百科，请稍候...')
+        start_time = time.time()
         baike_result = InternetQuery.prettify_baike_result(
             InternetQuery.search_baidu_baike(keyword))
-        baike_result = '百度百科：\n\n%s\n\n\n\n' % baike_result
-        self._insert_to_text_area(self.scrolled_text_5, baike_result)
-        self.status_label_value.set('百度百科搜索完成！')
+        if baike_result:
+            baike_result = '百度百科：\n\n%s\n\n\n\n' % baike_result
+            end_time = time.time()
+            self._insert_to_text_area(self.scrolled_text_5, baike_result)
+            self.status_label_value.set('百度百科搜索完成！用时：%fs' %
+                                        (end_time - start_time))
+        else:
+            self._insert_to_text_area(self.scrolled_text_5, baike_result)
+            self.status_label_value.set('查询百度百科未找到结果！')
 
     def _query_wikipedia(self):
         keyword = self.input_box.get().strip()
@@ -1099,10 +1105,17 @@ class AutocompleteGUI(tk.Frame):
             self.status_label_value.set('空的查询！')
             return ''
         self.status_label_value.set('正在搜索维基百科，请稍候...')
+        start_time = time.time()
         wikipedia_result = InternetQuery.search_wikipedia(keyword)
-        wikipedia_result = '维基百科：\n\n%s\n\n\n\n' % wikipedia_result
-        self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
-        self.status_label_value.set('维基百科搜索完成！')
+        if wikipedia_result:
+            wikipedia_result = '维基百科：\n\n%s\n\n\n\n' % wikipedia_result
+            end_time = time.time()
+            self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
+            self.status_label_value.set('维基百科搜索完成！用时：%fs' %
+                                        (end_time - start_time))
+        else:
+            self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
+            self.status_label_value.set('查询维基百科未未找到结果！')
 
     def _query_internet_multithreading(self):
         func_list = [self._query_baidu_baike,
@@ -1123,7 +1136,9 @@ class AutocompleteGUI(tk.Frame):
 
     def _display_candidates(self):
         self.status_label_value.set('开始搜索离线数据，请稍候...')
+        start_time = time.time()
         result_dict = self._query_offline_data()
+        end_time = time.time()
         if not result_dict:
             return
         # Display outcome to candidate widget 1
@@ -1144,7 +1159,9 @@ class AutocompleteGUI(tk.Frame):
         # Display outcome to candidate widget 4
         self.listbox4.delete('0', 'end')
         self.listbox4.insert('end', result_dict['3'])
-        self.status_label_value.set('离线数据搜索完成！双击候选词以查看详细信息')
+
+        self.status_label_value.set('离线数据搜索完成！用时：%fs。双击候选词以查看详细信息' %
+                                    (end_time - start_time))
 
     def _display_search_result(self, widget, is_clean_word=True):
         """Clean content in Output Area and insert new value."""
