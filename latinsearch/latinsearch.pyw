@@ -35,7 +35,7 @@ elif sys.version[0] == '3':
     from tkinter import filedialog as tkFileDialog
 
 
-__version__ = "v0.1.0"
+__version__ = "v0.2.0"
 __author__ = 'Jin'
 
 _history = []
