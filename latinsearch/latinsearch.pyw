@@ -7,7 +7,11 @@ from __future__ import (print_function, unicode_literals,
                         with_statement)
 
 import os
+import re
 import sys
+import urllib
+import requests
+from bs4 import BeautifulSoup
 
 try:
     import cPickle as pickle
@@ -56,6 +60,14 @@ SIMILARITY_THRESHOLD = 0.3
 SPECIAL_CHARS = ['×', '〔', '）', '【', '】', '', '', '<', '>',
                  '*', '[', '@', ']', '［', '|']
 TRAINED_OBJECT = object()
+
+BAIDU_BAIKE_BASE_URL = 'http://www.baidu.com/s?wd='
+WIKIPEDIA_BASE_URL = 'https://zh.wikipedia.org/wiki/'
+
+HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                        'AppleWebKit/537.36 (KHTML, like Gecko) '
+                        'Chrome/44.0.2403.125 Safari/537.36',
+}
 
 USAGE_INFO = """
 植物拉丁名搜索（Latin Namer Finer）
@@ -454,6 +466,60 @@ class QueryWord(object):
         return result_dict
 
 
+class InternetQuery(object):
+    @staticmethod
+    def search_baidu_baike(keyword):
+        """Search baidu and retrive content from first baike URL"""
+        url = BAIDU_BAIKE_BASE_URL + urllib.quote(keyword.encode('GBK'))
+        session = requests.session()
+        req = session.get(url, headers=HEADER)
+        req.encoding = 'utf-8'
+        soup = BeautifulSoup(req.text, "html.parser")
+        outcomes = soup.findAll('h3', {'class': 'c-gap-bottom-small'})
+        first_baike_url = outcomes[0].find(href=True).get('href')
+
+        req = session.get(first_baike_url, headers=HEADER)
+        req.encoding = 'utf-8'
+        soup = BeautifulSoup(req.text, "html.parser")
+        main_content = soup.find('div', {'class': 'basic-info cmn-clearfix'})
+        re_newline = re.compile(r'[^\n]+')
+        if main_content:
+            out_list = re_newline.findall(main_content.text)
+            return '\n'.join(out_list)
+        return ''
+
+    @staticmethod
+    def _prettify_baike_result(baike_result):
+        out_list = []
+        lines = [x.strip() for x in baike_result.splitlines() if x.strip()]
+        temp_str = ''
+        for i, line in enumerate(lines):
+            if i % 2 == 0:
+                temp_str = line
+            else:
+                temp_str = temp_str + '\t\t| ' + line
+                out_list.append(temp_str)
+        return '\n'.join(out_list)
+
+    @staticmethod
+    def search_wikipedia(keyword):
+        """Search glossary from Wikipedia."""
+        out_list = []
+        url = WIKIPEDIA_BASE_URL + \
+            urllib.quote(keyword.replace(' ', '_').encode('GBK'))
+        session = requests.session()
+        req = session.get(url, headers=HEADER)
+        soup = BeautifulSoup(req.text, 'html.parser')
+        out = soup.find('table', {'class': 'infobox biota'})
+        if not out:
+            return ''
+        td_out = out.find_all('td')
+        for each in td_out:
+            if each:
+                out_list.append(each.text.strip().replace('\n', ' '))
+        return '\n'.join(out_list)
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Right Menu
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -774,9 +840,14 @@ class AutocompleteGUI(tk.Frame):
             style='auto.TCombobox')
         self.input_box.focus()
 
-        self.do_query_button = ttk.Button(
+        self.search_offline_button = ttk.Button(
             self.content,
-            text='Do Query',
+            text='Search Offline',
+            style='copy.TButton')
+
+        self.search_internet_button = ttk.Button(
+            self.content,
+            text='Search Internet',
             style='copy.TButton')
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -819,36 +890,49 @@ class AutocompleteGUI(tk.Frame):
         """Grid configuration of window and widgets."""
         self.master.grid()
 
-        self.input_box.grid(row=0, column=0, columnspan=6, sticky=(tk.W + tk.E))
-        self.do_query_button.grid(row=0, column=6, columnspan=2, sticky='w')
+        # 1 110 110 110 110
+        #   |->         <-|
+        self.input_box.grid(row=0, column=1, columnspan=9, sticky='wens')
+        self.search_offline_button.grid(row=0, column=10, sticky='wens')
+        self.search_internet_button.grid(row=0, column=11, sticky='wens')
 
-        self.label_1.grid(row=1, column=0, columnspan=2, sticky=(tk.W))
-        self.listbox1.grid(row=2, column=0, sticky=(tk.W + tk.E + tk.N + tk.S))
-        self.scrollbar1.grid(row=2, column=1, sticky=(tk.N + tk.S))
+        # 1 110 110 110 110
+        #   |-|
+        self.label_1.grid(row=1, column=1, columnspan=3, sticky='ws')
+        self.listbox1.grid(row=2, column=1, columnspan=2, sticky='wens')
+        self.scrollbar1.grid(row=2, column=3, sticky='ns')
         self.listbox1.config(yscrollcommand=self.scrollbar1.set)
         self.scrollbar1.config(command=self.listbox1.yview)
 
-        self.label_2.grid(row=1, column=2, columnspan=2, sticky=(tk.W))
-        self.listbox2.grid(row=2, column=2, sticky=(tk.W + tk.E + tk.N + tk.S))
-        self.scrollbar2.grid(row=2, column=3, sticky=(tk.N + tk.S))
+        # 1 110 110 110 110
+        #       |-|
+        self.label_2.grid(row=1, column=4, columnspan=3, sticky='w')
+        self.listbox2.grid(row=2, column=4, columnspan=2, sticky='wens')
+        self.scrollbar2.grid(row=2, column=6, sticky='ns')
         self.listbox2.config(yscrollcommand=self.scrollbar2.set)
         self.scrollbar2.config(command=self.listbox2.yview)
 
-        self.label_3.grid(row=1, column=4, columnspan=2, sticky=(tk.W))
-        self.listbox3.grid(row=2, column=4, sticky=(tk.W + tk.E + tk.N + tk.S))
-        self.scrollbar3.grid(row=2, column=5, sticky=(tk.N + tk.S))
+        # 1 110 110 110 110
+        #           |-|
+        self.label_3.grid(row=1, column=7, columnspan=3, sticky='w')
+        self.listbox3.grid(row=2, column=7, columnspan=2, sticky='wens')
+        self.scrollbar3.grid(row=2, column=9, sticky='ns')
         self.listbox3.config(yscrollcommand=self.scrollbar3.set)
         self.scrollbar3.config(command=self.listbox3.yview)
 
-        self.label_4.grid(row=1, column=6, columnspan=2, sticky=(tk.W))
-        self.listbox4.grid(row=2, column=6, sticky=(tk.W + tk.E + tk.N + tk.S))
-        self.scrollbar4.grid(row=2, column=7, sticky=(tk.N + tk.S))
+        # 1 110 110 110 110
+        #               |-|
+        self.label_4.grid(row=1, column=10, columnspan=3, sticky='w')
+        self.listbox4.grid(row=2, column=10, columnspan=2, sticky='wens')
+        self.scrollbar4.grid(row=2, column=12, sticky='ns')
         self.listbox4.config(yscrollcommand=self.scrollbar4.set)
         self.scrollbar4.config(command=self.listbox4.yview)
 
-        self.label_5.grid(row=3, column=0, columnspan=7, sticky=(tk.W))
-        self.scrolled_text_5.grid(row=4, column=0, columnspan=7,
-                                  sticky=(tk.N + tk.S + tk.W + tk.E))
+        # 1 110 110 110 110
+        #   |->         <-|
+        self.label_5.grid(row=3, column=1, columnspan=12, sticky='w')
+        self.scrolled_text_5.grid(row=4, column=1, columnspan=12,
+                                  sticky='wens')
 
     def row_and_column_configure(self):
         """Rows and columns configuration"""
@@ -860,14 +944,22 @@ class AutocompleteGUI(tk.Frame):
         self.content.rowconfigure(2, weight=1)
         self.content.rowconfigure(3, weight=0)
         self.content.rowconfigure(4, weight=1)
+
+        # config   listbox1  listbox2  listbox3  listbox4
+        #    1       110        110      110       110
         self.content.columnconfigure(0, weight=1)
-        self.content.columnconfigure(1, weight=0)
+        self.content.columnconfigure(1, weight=1)
         self.content.columnconfigure(2, weight=1)
         self.content.columnconfigure(3, weight=0)
         self.content.columnconfigure(4, weight=1)
-        self.content.columnconfigure(5, weight=0)
-        self.content.columnconfigure(6, weight=1)
-        self.content.columnconfigure(7, weight=0)
+        self.content.columnconfigure(5, weight=1)
+        self.content.columnconfigure(6, weight=0)
+        self.content.columnconfigure(7, weight=1)
+        self.content.columnconfigure(8, weight=1)
+        self.content.columnconfigure(9, weight=0)
+        self.content.columnconfigure(10, weight=1)
+        self.content.columnconfigure(11, weight=1)
+        self.content.columnconfigure(12, weight=0)
 
     def create_right_menu(self):
         # Right menu for input combobox
@@ -880,7 +972,8 @@ class AutocompleteGUI(tk.Frame):
         self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
 
     def bind_func(self):
-        self.do_query_button['command'] = self._display_candidates
+        self.search_offline_button['command'] = self._display_candidates
+        self.search_internet_button['command'] = self._query_baidu_baike
 
         def bind_command_to_listbox(widget):
             """Bind command to listbox.
@@ -946,6 +1039,19 @@ class AutocompleteGUI(tk.Frame):
                             query,
                             turn_on_mode=(True, True, True, False))
         return result_dict
+
+    def _query_baidu_baike(self):
+        keyword = self.input_box.get().strip()
+        if not keyword:
+            return ''
+        # self._set_status_label('正在搜索百度百科，请稍候...')
+        baike_result = InternetQuery._prettify_baike_result(
+            InternetQuery.search_baidu_baike(keyword))
+        self._insert_to_text_area(self.scrolled_text_5, baike_result)
+        # self._set_status_label('百度百科搜索完成！')
+
+    def _query_wikipedia(self):
+        pass
 
     def _display_candidates(self):
         result_dict = self._query_offline_data()
@@ -1014,6 +1120,12 @@ class AutocompleteGUI(tk.Frame):
                     elements = '  |  '.join(each_result)
                     self.scrolled_text_5.insert('end', elements)
                     self.scrolled_text_5.insert('end', ('\n%s\n' % ('-' * 100)))
+
+    @staticmethod
+    def _insert_to_text_area(st_widget, content):
+        """Clear original content from ScrolledText area and insert new"""
+        st_widget.delete('1.0', 'end')
+        st_widget.insert('end', content)
 
     def _copy(self):
         # self.master.clipboard_clear()
