@@ -781,6 +781,22 @@ class AutocompleteGUI(tk.Frame):
         s.configure('TButton', padding=(10))
         s.configure('open.TButton', foreground='blue')
 
+        # Configure Title Frame
+        s.configure(
+            'config.TLabel',
+            padding=10,
+            font=('helvetica', 11, 'bold'),
+        )
+        s.configure(
+            'listbox.TLabel',
+            padding=2,
+        )
+        s.configure(
+            'status.TLabel',
+            padding=5,
+            foreground='blue',
+        )
+
     def create_menu_bar(self):
         """Create menubar for the main window."""
         self.menubar = tk.Menu(self.master)
@@ -836,6 +852,13 @@ class AutocompleteGUI(tk.Frame):
         self.content.grid(row=0, column=0, sticky=(tk.W + tk.E + tk.N + tk.S))
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        # Sidebar configuration area
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self.sidebar_label = ttk.Label(self.content,
+                                       text='Configurations',
+                                       style='config.TLabel')
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Search bar & Search offline button & Search internet button
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self.input_box = ttk.Combobox(
@@ -857,33 +880,43 @@ class AutocompleteGUI(tk.Frame):
         # Four labels & Four candidate listboxes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         self.label_1 = ttk.Label(self.content,
-                                 text='Candidates (Startswith / Endswith)')
+                                 text='Candidates (Startswith / Endswith)',
+                                 style='listbox.TLabel')
         self.listbox1 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar1 = ttk.Scrollbar(self.content)
 
         self.label_2 = ttk.Label(
-            self.content, text='Candidates (Contains)')
+            self.content,
+            text='Candidates (Contains)',
+            style='listbox.TLabel')
         self.listbox2 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar2 = ttk.Scrollbar(self.content)
 
         self.label_3 = ttk.Label(
-            self.content, text='Candidates (Rank by similarity)')
+            self.content,
+            text='Candidates (Rank by similarity)',
+            style='listbox.TLabel')
         self.listbox3 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar3 = ttk.Scrollbar(self.content)
 
         self.label_4 = ttk.Label(
             self.content,
-            text='Candidates (Spell check, single edit distance)')
+            text='Candidates (Spell check, single edit distance)',
+            style='listbox.TLabel')
         self.listbox4 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar4 = ttk.Scrollbar(self.content)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Result label & Result ScrolledText area
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        self.status_label_value = tk.StringVar()
         self.label_5 = ttk.Label(
             self.content,
-            text=('Click "Do Query" button and see results. '
-                  '** Double Click ** candidate to see detailed result.'))
+            textvariable=self.status_label_value,
+            style='status.TLabel')
+        self.status_label_value.set(
+            'Click "Do Query" button and see results. '
+            '** Double Click ** candidate to see detailed result.')
         self.scrolled_text_5 = st.ScrolledText(self.content,
                                                font=('Monospace', 10))
 
@@ -892,6 +925,8 @@ class AutocompleteGUI(tk.Frame):
     def grid_configure(self):
         """Grid configuration of window and widgets."""
         self.master.grid()
+
+        self.sidebar_label.grid(row=0, column=0, sticky='w')
 
         # 1 110 110 110 110
         #   |->         <-|
@@ -1006,6 +1041,9 @@ class AutocompleteGUI(tk.Frame):
     def _query_offline_data(self):
         """Command of Do Query button with multi-processing"""
         query = self.input_box.get().strip()
+        if not query:
+            self.status_label_value.set('空的查询！')
+            return ''
         query_word_object = QueryWord(
             self.keys_for_all, self.dict_for_all)
         result_dict = {'0': [], '1': [], '2': [], '3': ''}
@@ -1046,29 +1084,31 @@ class AutocompleteGUI(tk.Frame):
     def _query_baidu_baike(self):
         keyword = self.input_box.get().strip()
         if not keyword:
+            self.status_label_value.set('空的查询！')
             return ''
-        # self._set_status_label('正在搜索百度百科，请稍候...')
+        self.status_label_value.set('正在搜索百度百科，请稍候...')
         baike_result = InternetQuery.prettify_baike_result(
             InternetQuery.search_baidu_baike(keyword))
         baike_result = '百度百科：\n\n%s\n\n\n\n' % baike_result
         self._insert_to_text_area(self.scrolled_text_5, baike_result)
-        # self._set_status_label('百度百科搜索完成！')
+        self.status_label_value.set('百度百科搜索完成！')
 
     def _query_wikipedia(self):
         keyword = self.input_box.get().strip()
         if not keyword:
+            self.status_label_value.set('空的查询！')
             return ''
-        # self._set_status_label('正在搜索维基百科，请稍候...')
+        self.status_label_value.set('正在搜索维基百科，请稍候...')
         wikipedia_result = InternetQuery.search_wikipedia(keyword)
         wikipedia_result = '维基百科：\n\n%s\n\n\n\n' % wikipedia_result
         self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
-        # self._set_status_label('维基百科搜索完成！')
+        self.status_label_value.set('维基百科搜索完成！')
 
     def _query_internet_multithreading(self):
         func_list = [self._query_baidu_baike,
                      self._query_wikipedia]
 
-        # self._set_status_label('开始搜索，请耐性等待...')
+        self.status_label_value.set('开始搜索，请耐性等待...')
         print('开始搜索，请耐性等待...')
         self.scrolled_text_5.delete('1.0', 'end-1c')
         self.scrolled_text_5.update_idletasks()
@@ -1079,10 +1119,13 @@ class AutocompleteGUI(tk.Frame):
             thread.start()
             # thread.join()
             time.sleep(0.1)
-        # self._set_status_label('搜索完成！')
+        self.status_label_value.set('搜索完成！')
 
     def _display_candidates(self):
+        self.status_label_value.set('开始搜索离线数据，请稍候...')
         result_dict = self._query_offline_data()
+        if not result_dict:
+            return
         # Display outcome to candidate widget 1
         self.listbox1.delete('0', 'end')
         for item in result_dict['0']:
@@ -1101,6 +1144,7 @@ class AutocompleteGUI(tk.Frame):
         # Display outcome to candidate widget 4
         self.listbox4.delete('0', 'end')
         self.listbox4.insert('end', result_dict['3'])
+        self.status_label_value.set('离线数据搜索完成！双击候选词以查看详细信息')
 
     def _display_search_result(self, widget, is_clean_word=True):
         """Clean content in Output Area and insert new value."""
