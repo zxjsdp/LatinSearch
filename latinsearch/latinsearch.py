@@ -833,6 +833,42 @@ class AutocompleteGUI(tk.Frame):
                         self.listbox3, self.listbox4]:
             bind_command_to_listbox(listbox)
 
+    def grid_configure(self):
+        """Grid configuration of window and widgets."""
+        self.master.rowconfigure(0, weight=1)
+        self.master.columnconfigure(0, weight=1)
+
+        self.content.rowconfigure(0, weight=0)
+        self.content.rowconfigure(1, weight=0)
+        self.content.rowconfigure(2, weight=1)
+        self.content.rowconfigure(3, weight=0)
+        self.content.rowconfigure(4, weight=1)
+        self.content.columnconfigure(0, weight=1)
+        self.content.columnconfigure(1, weight=0)
+        self.content.columnconfigure(2, weight=1)
+        self.content.columnconfigure(3, weight=0)
+        self.content.columnconfigure(4, weight=1)
+        self.content.columnconfigure(5, weight=0)
+        self.content.columnconfigure(6, weight=1)
+        self.content.columnconfigure(7, weight=0)
+
+    def create_right_menu(self):
+        # Right menu for input combobox
+        right_menu_input_box = RightClickMenu(self.input_box)
+        self.input_box.bind('<Button-3>', right_menu_input_box)
+
+        # Right menu for output area
+        right_menu_scrolled_text_5 = RightClickMenuForScrolledText(
+            self.scrolled_text_5)
+        self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
+
+    def bind_func(self):
+        self.do_query_button['command'] = self.show_candidates_for_multi_processing
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    # Functional methods
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
     def clean_and_insert_value(self, widget, is_clean_word=True):
         """Clean content in Output Area and insert new value."""
         # Listbox index must be: active, anchor, end, @x,y, or a number
@@ -940,38 +976,6 @@ class AutocompleteGUI(tk.Frame):
         # Display outcome to candidate widget 4
         self.listbox4.delete('0', 'end')
         self.listbox4.insert('end', result_dict['3'])
-
-    def grid_configure(self):
-        """Grid configuration of window and widgets."""
-        self.master.rowconfigure(0, weight=1)
-        self.master.columnconfigure(0, weight=1)
-
-        self.content.rowconfigure(0, weight=0)
-        self.content.rowconfigure(1, weight=0)
-        self.content.rowconfigure(2, weight=1)
-        self.content.rowconfigure(3, weight=0)
-        self.content.rowconfigure(4, weight=1)
-        self.content.columnconfigure(0, weight=1)
-        self.content.columnconfigure(1, weight=0)
-        self.content.columnconfigure(2, weight=1)
-        self.content.columnconfigure(3, weight=0)
-        self.content.columnconfigure(4, weight=1)
-        self.content.columnconfigure(5, weight=0)
-        self.content.columnconfigure(6, weight=1)
-        self.content.columnconfigure(7, weight=0)
-
-    def create_right_menu(self):
-        # Right menu for input combobox
-        right_menu_input_box = RightClickMenu(self.input_box)
-        self.input_box.bind('<Button-3>', right_menu_input_box)
-
-        # Right menu for output area
-        right_menu_scrolled_text_5 = RightClickMenuForScrolledText(
-            self.scrolled_text_5)
-        self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
-
-    def bind_func(self):
-        self.do_query_button['command'] = self.show_candidates_for_multi_processing
 
     def print_help(self):
         self.scrolled_text_5.delete("0.1", "end-1c")
