@@ -42,7 +42,7 @@ elif sys.version[0] == '3':
     import tkinter.scrolledtext as st
     from tkinter import filedialog as tkFileDialog
 
-__version__ = "v0.3.0"
+__version__ = "v0.3.1"
 __author__ = 'Jin'
 
 _history = []
