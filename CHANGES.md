@@ -1,6 +1,23 @@
 CHANGES
 =======
 
+0.3.1
+-----
+
+Release data:
+
+Feature
+-------
+
+* 更为完善的中文语言及英文语言切换
+
+Improve:
+
+* 使用 PrettyTable 美化百度百科的搜索结果
+
+Bugfix:
+
+
 0.3.0
 -----
 
