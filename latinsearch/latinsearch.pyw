@@ -6,11 +6,11 @@
 from __future__ import (print_function, unicode_literals,
                         with_statement)
 
+import os
 import sys
 # Local zipped libraries
-sys.path.insert(0, 'lib.zip')
+sys.path.insert(0, os.path.join('data', 'lib.zip'))
 
-import os
 import re
 import time
 import urllib
