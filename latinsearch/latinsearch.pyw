@@ -97,9 +97,9 @@ TEXT_DICT_EN = {
     },
     'config': {
         'config_label': 'Configurations',
-        'similarity_search_switch': '关闭相似值搜索',
-        'spell_check_switch': '关闭拼写检查',
-        'match_whole_word': '全字匹配',
+        'similarity_search_switch': 'Turn off similarity search',
+        'spell_check_switch': 'Turn off spell check',
+        'match_whole_word': 'Match whole word',
     },
     'buttons': {
         'search_offline_button': 'Search Offline',
@@ -116,6 +116,100 @@ TEXT_DICT_EN = {
         'default_status_label': (
             'Click "Do Query" button and see results. '
             '** Double Click ** candidate to see detailed result.'),
+    },
+    'info_text': {
+        'blank_query_label': 'Blank query !!',
+        'searching_baidu_baike': 'Searching Baidu Baike! Please wait...',
+        'searching_wikipedia': 'Searching Wikipedia! Please wait...',
+
+        'start_searching': 'Start searching! Please wait...',
+        'search_complete': 'Search complete!',
+        'start_offline_search': (
+            'Start searching offline data. Please wait...'),
+        'offline_search_complete_1': (
+            'Baidu Baike searching complete! Time used:'),
+        'offline_search_complete_2': (
+            '. Double click candidate words to see detailed information'),
+
+        # Baidu baike
+        'baike_result_info': 'Baidu Baike:',
+        'baike_search_complete': 'Baidu Baike searching complete! Time used:',
+        'baike_no_result': 'No result from Baidu Baike!',
+
+        # Wikipedia
+        'wikipedia_result_info': 'Wikipedia:',
+        'wikipedia_search_complete': 'Wikipedia searching complete! Time used:',
+        'wikipedia_no_result': 'No result from Wikipedia!',
+
+        'pretty_table_install_info': (
+            'Please install "prettytable" to get nicer result.'
+            '\nHow to install: '),
+    },
+    'right_click_menu': {
+        'copy': 'Copy',
+        'cut': 'Cut',
+        'paste': 'Paste',
+        'delete': 'Delete',
+        'select_all': 'Select All',
+    },
+    'right_click_menu_listbox': {
+        'copy': 'Copy',
+    },
+    'right_click_menu_st': {
+        'copy': 'Copy',
+        'cut': 'Cut',
+        'paste': 'Paste',
+        'delete': 'Delete',
+        'select_all': 'Select All',
+        'clear_all': 'Clear All',
+    }
+}
+
+TEXT_DICT_CN = {
+    'main_window': {
+        'geometry': '1400x800',
+        'main_title': '拉丁名搜索（Latin Finder）',
+    },
+    'menu_bar': {
+        # File cascade
+        'file_cascade': '文件',
+        'save': '结果另存为...',
+        'exit': '退出',
+
+        # Edit cascade
+        'edit_cascade': '编辑',
+        'copy': '复制',
+        'cut': '剪切',
+        'paste': '粘贴',
+        'no_str_in_clipboard_warning': '剪切板中无可粘贴的内容！',
+        'delete': '删除',
+
+        # Helo cascade
+        'help_cascade': '帮助',
+        'help': '帮助信息',
+        'about': '关于',
+    },
+    'config': {
+        'config_label': '配置区域',
+        'similarity_search_switch': '关闭相似值搜索',
+        'spell_check_switch': '关闭拼写检查',
+        'match_whole_word': '全字匹配',
+    },
+    'buttons': {
+        'search_offline_button': '搜索离线数据',
+        'search_internet_button': '网络搜索',
+    },
+    'labels': {
+        # Candidate listbox labels
+        'startswith_endswith_label': '候选词（起始/结尾）',
+        'contains_label': '候选词（包括）',
+        'similarity_label': '候选词（相似度搜索）',
+        'spell_check_label': '候选词（拼写检查）',
+
+        # Status label
+        'default_status_label': (
+            '双击候选词查看候选词所对应的离线信息'
+        ),
     },
     'info_text': {
         'blank_query_label': '空的查询',
@@ -142,26 +236,26 @@ TEXT_DICT_EN = {
             '请安装 prettytable 以获得更清晰的结果视图。\n安装方法：'),
     },
     'right_click_menu': {
-        'copy': 'Copy',
-        'cut': 'Cut',
-        'paste': 'Paste',
-        'delete': 'Delete',
-        'select_all': 'Select All',
+        'copy': '复制',
+        'cut': '剪切',
+        'paste': '粘贴',
+        'delete': '删除',
+        'select_all': '全部选择',
     },
     'right_click_menu_listbox': {
-        'copy': 'Copy',
+        'copy': '复制',
     },
     'right_click_menu_st': {
-        'copy': 'Copy',
-        'cut': 'Cut',
-        'paste': 'Paste',
-        'delete': 'Delete',
-        'select_all': 'Select All',
-        'clear_all': 'Clear All',
+        'copy': '复制',
+        'cut': '剪切',
+        'paste': '粘贴',
+        'delete': '删除',
+        'select_all': '全部选择',
+        'clear_all': '清空',
     }
 }
 
-CURRENT_TEXT_DICT = TEXT_DICT_EN
+CURRENT_TEXT_DICT = TEXT_DICT_CN
 
 USAGE_INFO = """
 植物拉丁名搜索（Latin Namer Finer）
@@ -943,29 +1037,29 @@ class AutocompleteGUI(tk.Frame):
         )
 
     def create_menu_bar(self):
-        """Create menubar for the main window."""
-        self.menubar = tk.Menu(self.master)
+        """Create menu_bar for the main window."""
+        menu_bar = tk.Menu(self.master)
 
         # ~~~~~~~~~~~~~~~~~~~~~~
         # File Menu
         # ~~~~~~~~~~~~~~~~~~~~~~
-        self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.file_menu.add_command(
+        file_menu = tk.Menu(menu_bar, tearoff=0)
+        file_menu.add_command(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('save'),
             command=self._ask_save_file
         )
-        self.file_menu.add_separator()
-        self.file_menu.add_command(
+        file_menu.add_separator()
+        file_menu.add_command(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('exit'),
             command=self.master.quit)
-        self.menubar.add_cascade(
+        menu_bar.add_cascade(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('file_cascade'),
-            menu=self.file_menu)
+            menu=file_menu)
 
         # ~~~~~~~~~~~~~~~~~~~~~~
         # Edit Menu
         # ~~~~~~~~~~~~~~~~~~~~~~
-        edit_menu = tk.Menu(self.menubar, tearoff=0)
+        edit_menu = tk.Menu(menu_bar, tearoff=0)
         edit_menu.add_command(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('copy'),
             command=self._copy)
@@ -986,28 +1080,29 @@ class AutocompleteGUI(tk.Frame):
                 command=lambda: print(
                     CURRENT_TEXT_DICT.get('menu_bar').get(
                         'no_str_in_clipboard_warning')))
+        edit_menu.add_separator()
         edit_menu.add_command(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('delete'),
             command=self._delete)
-        self.menubar.add_cascade(
+        menu_bar.add_cascade(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('edit_cascade'),
             menu=edit_menu)
 
         # ~~~~~~~~~~~~~~~~~~~~~~
         # About Menu
         # ~~~~~~~~~~~~~~~~~~~~~~
-        self.help_menu = tk.Menu(self.menubar, tearoff=0)
-        self.help_menu.add_command(
+        help_menu = tk.Menu(menu_bar, tearoff=0)
+        help_menu.add_command(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('help'),
             command=self._display_help)
-        self.help_menu.add_command(
+        help_menu.add_command(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('about'),
             command=self._display_about)
-        self.menubar.add_cascade(
+        menu_bar.add_cascade(
             label=CURRENT_TEXT_DICT.get('menu_bar').get('help_cascade'),
-            menu=self.help_menu)
+            menu=help_menu)
 
-        self.master.config(menu=self.menubar)
+        self.master.config(menu=menu_bar)
 
     def create_widgets(self):
         """Create widgets for the main GUI window."""
