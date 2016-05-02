@@ -39,7 +39,6 @@ elif sys.version[0] == '3':
     import tkinter.scrolledtext as st
     from tkinter import filedialog as tkFileDialog
 
-
 __version__ = "v0.3.0"
 __author__ = 'Jin'
 
@@ -61,6 +60,10 @@ SIMILARITY_THRESHOLD = 0.3
 # 拉丁名中的特殊字符
 SPECIAL_CHARS = ['×', '〔', '）', '【', '】', '', '', '<', '>',
                  '*', '[', '@', ']', '［', '|']
+
+# Two blanks in list are different!!
+SPECIAL_CHARS_IN_BAIDU_RESULT = [' ', ' ', '\t']
+
 TRAINED_OBJECT = object()
 
 BAIDU_BAIKE_BASE_URL = 'http://www.baidu.com/s?wd='
@@ -69,7 +72,7 @@ WIKIPEDIA_BASE_URL = 'https://zh.wikipedia.org/wiki/'
 HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                         'AppleWebKit/537.36 (KHTML, like Gecko) '
                         'Chrome/44.0.2403.125 Safari/537.36',
-}
+          }
 
 TEXT_DICT_EN = {
     'main_window': {
@@ -144,6 +147,10 @@ TEXT_DICT_EN = {
         'pretty_table_install_info': (
             'Please install "prettytable" to get nicer result.'
             '\nHow to install: '),
+
+        # Baidu Baike result (prettytable header line)
+        'baidu_result_attr': 'Attribute',
+        'baidu_result_value': 'Value',
     },
     'right_click_menu': {
         'copy': 'Copy',
@@ -208,7 +215,9 @@ TEXT_DICT_CN = {
 
         # Status label
         'default_status_label': (
-            '双击候选词查看候选词所对应的离线信息'
+            '提示：1. 搜索离线数据后，双击上方的某个候选词，以查看对应的离线信息。  '
+            '2. 离线搜索 / 网络搜索默认均开启模糊搜索。  '
+            '3. 使用精确的搜索词可大幅提升搜索速度。'
         ),
     },
     'info_text': {
@@ -234,6 +243,10 @@ TEXT_DICT_CN = {
 
         'pretty_table_install_info': (
             '请安装 prettytable 以获得更清晰的结果视图。\n安装方法：'),
+
+        # Baidu Baike result (prettytable header line)
+        'baidu_result_attr': '属性',
+        'baidu_result_value': '搜索结果',
     },
     'right_click_menu': {
         'copy': '复制',
@@ -521,7 +534,7 @@ class QueryWord(object):
 
     def __init__(self, keys_for_all, dict_for_all):
         self.keys_for_all = [x.strip() for x in keys_for_all
-                                   if x.strip()]
+                             if x.strip()]
         self.dict_for_all = dict_for_all
         self.trained_object = SpellCheck(keys_for_all)
         self.query = ''
@@ -661,7 +674,7 @@ class QueryWord(object):
         for i, each_func in enumerate(func_list_2):
             p = Process(target=each_func(self.query, self.keys_for_all,
                                          self.dict_for_all, result_dict,
-                                         match_whole_word, turn_on_mode[i+2]))
+                                         match_whole_word, turn_on_mode[i + 2]))
             p.start()
 
         return result_dict
@@ -693,21 +706,43 @@ class InternetQuery(object):
     def prettify_baike_result(baike_result):
         out_list = []
         lines = [x.strip() for x in baike_result.splitlines() if x.strip()]
-        temp_str = ''
-        for i, line in enumerate(lines):
-            if i % 2 == 0:
-                temp_str = line
-            else:
-                temp_str = temp_str + '\t\t| ' + line
-                out_list.append(temp_str)
-        return '\n'.join(out_list)
+        if PrettyTable:
+            table = PrettyTable([
+                CURRENT_TEXT_DICT.get('info_text').get('baidu_result_attr'),
+                CURRENT_TEXT_DICT.get('info_text').get('baidu_result_value')])
+            for column in (
+                CURRENT_TEXT_DICT.get('info_text').get('baidu_result_attr'),
+                CURRENT_TEXT_DICT.get('info_text').get('baidu_result_value')
+            ):
+                table.align[column] = "l"
+            table.padding_width = 1
+            list_for_each_line = []
+            for i, line in enumerate(lines):
+                if i % 2 == 0:
+                    for each_char in SPECIAL_CHARS_IN_BAIDU_RESULT:
+                        line = line.replace(each_char, '')
+                    list_for_each_line.append(line)
+                else:
+                    list_for_each_line.append(line)
+                    table.add_row(list_for_each_line)
+                    list_for_each_line = []
+            return table.get_string()
+        else:
+            temp_str = ''
+            for i, line in enumerate(lines):
+                if i % 2 == 0:
+                    temp_str = line.replace(' ', '')
+                else:
+                    temp_str = temp_str + '\t\t| ' + line
+                    out_list.append(temp_str)
+            return '\n'.join(out_list)
 
     @staticmethod
     def search_wikipedia(keyword):
         """Search glossary from Wikipedia."""
         out_list = []
         url = WIKIPEDIA_BASE_URL + \
-            urllib.quote(keyword.replace(' ', '_').encode('GBK'))
+              urllib.quote(keyword.replace(' ', '_').encode('GBK'))
         session = requests.session()
         req = session.get(url, headers=HEADER)
         soup = BeautifulSoup(req.text, 'html.parser')
@@ -1536,9 +1571,9 @@ class AutocompleteGUI(tk.Frame):
                      '+--------------+-------------+---------+'
                      '-------+-------+-------------+---------+\n'
                      '\n%s\n' % (
-                          CURRENT_TEXT_DICT.get(
-                              'info_text').get('pretty_table_install_info'),
-                          '=' * 100)))
+                         CURRENT_TEXT_DICT.get(
+                             'info_text').get('pretty_table_install_info'),
+                         '=' * 100)))
                 for each_result in result:
                     elements = '  |  '.join(each_result)
                     self.scrolled_text_5.insert('end', elements)
