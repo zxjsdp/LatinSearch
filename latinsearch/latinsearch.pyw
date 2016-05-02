@@ -71,6 +71,98 @@ HEADER = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
                         'Chrome/44.0.2403.125 Safari/537.36',
 }
 
+TEXT_DICT_EN = {
+    'main_window': {
+        'geometry': '1400x800',
+        'main_title': 'Latin Finder',
+    },
+    'menu_bar': {
+        # File cascade
+        'file_cascade': 'File',
+        'save': 'Save result to file...',
+        'exit': 'Exit',
+
+        # Edit cascade
+        'edit_cascade': 'Edit',
+        'copy': 'Copy',
+        'cut': 'Cut',
+        'paste': 'Paste',
+        'no_str_in_clipboard_warning': 'No string in clipboard!',
+        'delete': 'Delete',
+
+        # Helo cascade
+        'help_cascade': 'Help',
+        'help': 'Help',
+        'about': 'About',
+    },
+    'config': {
+        'config_label': 'Configurations',
+        'similarity_search_switch': '关闭相似值搜索',
+        'spell_check_switch': '关闭拼写检查',
+        'match_whole_word': '全字匹配',
+    },
+    'buttons': {
+        'search_offline_button': 'Search Offline',
+        'search_internet_button': 'Search Internet',
+    },
+    'labels': {
+        # Candidate listbox labels
+        'startswith_endswith_label': 'Candidates (Startswith / Endswith)',
+        'contains_label': 'Candidates (Contains)',
+        'similarity_label': 'Candidates (Rank by similarity)',
+        'spell_check_label': 'Candidates (Spell check, single edit distance)',
+
+        # Status label
+        'default_status_label': (
+            'Click "Do Query" button and see results. '
+            '** Double Click ** candidate to see detailed result.'),
+    },
+    'info_text': {
+        'blank_query_label': '空的查询',
+        'searching_baidu_baike': '正在搜索百度百科，请稍候...',
+        'searching_wikipedia': '正在搜索维基百科，请稍候...',
+
+        'start_searching': '开始搜索，请耐性等待...',
+        'search_complete': '搜索完成！',
+        'start_offline_search': '开始搜索离线数据，请稍候...',
+        'offline_search_complete_1': '离线数据搜索完成！用时：',
+        'offline_search_complete_2': '。双击候选词以查看详细信息',
+
+        # Baidu baike
+        'baike_result_info': '百度百科：',
+        'baike_search_complete': '百度百科搜索完成！用时：',
+        'baike_no_result': '查询百度百科未找到结果！',
+
+        # Wikipedia
+        'wikipedia_result_info': '维基百科：',
+        'wikipedia_search_complete': '维基百科搜索完成！用时：',
+        'wikipedia_no_result': '查询维基百科未找到结果！',
+
+        'pretty_table_install_info': (
+            '请安装 prettytable 以获得更清晰的结果视图。\n安装方法：'),
+    },
+    'right_click_menu': {
+        'copy': 'Copy',
+        'cut': 'Cut',
+        'paste': 'Paste',
+        'delete': 'Delete',
+        'select_all': 'Select All',
+    },
+    'right_click_menu_listbox': {
+        'copy': 'Copy',
+    },
+    'right_click_menu_st': {
+        'copy': 'Copy',
+        'cut': 'Cut',
+        'paste': 'Paste',
+        'delete': 'Delete',
+        'select_all': 'Select All',
+        'clear_all': 'Clear All',
+    }
+}
+
+CURRENT_TEXT_DICT = TEXT_DICT_EN
+
 USAGE_INFO = """
 植物拉丁名搜索（Latin Namer Finer）
 
@@ -453,7 +545,6 @@ class QueryWord(object):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # for i, each_func in enumerate(func_list):
         #     each_func(turn_on_mode[i])
-        print('query_all_four: ', turn_on_mode)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Multi-processing
@@ -576,32 +667,50 @@ class RightClickMenu(object):
         # check to see if there is any marked text in the entry widget.
         # if not then Cut and Copy are disabled.
         if not self.parent.selection_present():
-            menu.add_command(label="Copy", state='disable')
-            menu.add_command(label="Cut", state='disable')
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('copy'),
+                state='disable')
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('cut'),
+                state='disable')
         else:
             # use Tkinter's virtual events for brevity.  These could
             # be hardcoded with our own functions to immitate the same
             # actions but there's no point except as a novice exercise
             # (which I recommend if you're a novice).
-            menu.add_command(label="Copy", command=self._copy)
-            menu.add_command(label="Cut", command=self._cut)
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('copy'),
+                command=self._copy)
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('cut'),
+                command=self._cut)
         # if there's string data in the clipboard then make the normal
         # Paste command.  otherwise disable it.
         if self.paste_string_state():
-            menu.add_command(label="Paste", command=self._paste)
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('paste'),
+                command=self._paste)
         else:
-            menu.add_command(label="Paste", state='disable')
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('paste'),
+                state='disable')
         # again, if there's no marked text then the Delete option is disabled.
         if not self.parent.selection_present():
-            menu.add_command(label="Delete", state='disable')
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('delete'),
+                state='disable')
         else:
-            menu.add_command(label="Delete", command=self._clear)
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get('right_click_menu').get('delete'),
+                command=self._clear)
         # make things pretty with a horizontal separator
         menu.add_separator()
         # I don't know of if there's a virtual event for select all though
         # I did look in vain for documentation on -any- of Tkinter's
         # virtual events.  Regardless, the method itself is trivial.
-        menu.add_command(label="Select All", command=self._select_all)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get('right_click_menu').get('select_all'),
+            command=self._select_all)
         menu.post(event.x_root, event.y_root)
 
     def _cut(self):
@@ -666,7 +775,10 @@ class RightClickMenuForListBox(object):
     def build_menu(self, event):
         """Build right click menu"""
         menu = tk.Menu(self.parent, tearoff=0)
-        menu.add_command(label="Copy", command=self._copy)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get(
+                'right_click_menu_listbox').get('copy'),
+            command=self._copy)
         menu.post(event.x_root, event.y_root)
 
     def _copy(self):
@@ -707,24 +819,41 @@ class RightClickMenuForScrolledText(object):
         # be hardcoded with our own functions to immitate the same
         # actions but there's no point except as a novice exercise
         # (which I recommend if you're a novice).
-        menu.add_command(label="Copy", command=self._copy)
-        menu.add_command(label="Cut", command=self._cut)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get('right_click_menu_st').get('copy'),
+            command=self._copy)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get('right_click_menu_st').get('cut'),
+            command=self._cut)
         # if there's string data in the clipboard then make the normal
         # Paste command.  otherwise disable it.
         if self._paste_string_state():
-            menu.add_command(label="Paste",
-                             command=self._paste_if_string_in_clipboard)
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get(
+                    'right_click_menu_st').get('paste'),
+                command=self._paste_if_string_in_clipboard)
         else:
-            menu.add_command(label="Paste", state='disable')
+            menu.add_command(
+                label=CURRENT_TEXT_DICT.get(
+                    'right_click_menu_st').get('paste'),
+                state='disable')
         # again, if there's no marked text then the Delete option is disabled.
-        menu.add_command(label="Delete", command=self._delete)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get('right_click_menu_st').get('delete'),
+            command=self._delete)
         # make things pretty with a horizontal separator
         menu.add_separator()
         # I don't know of if there's a virtual event for select all though
         # I did look in vain for documentation on -any- of Tkinter's
         # virtual events.  Regardless, the method itself is trivial.
-        menu.add_command(label="Select All", command=self._select_all)
-        menu.add_command(label="Clear All", command=self._clear_all)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get(
+                'right_click_menu_st').get('select_all'),
+            command=self._select_all)
+        menu.add_command(
+            label=CURRENT_TEXT_DICT.get(
+                'right_click_menu_st').get('clear_all'),
+            command=self._clear_all)
         menu.post(event.x_root, event.y_root)
 
     def _cut(self):
@@ -774,8 +903,11 @@ class AutocompleteGUI(tk.Frame):
         self.history = []
 
         # GUI
-        self.master.geometry('1400x800')
-        self.master.title('Latin Finder %s' % __version__)
+        self.master.geometry(
+            CURRENT_TEXT_DICT.get('main_window').get('geometry'))
+        self.master.title(
+            '%s %s' % (CURRENT_TEXT_DICT.get('main_window').get("main_title"),
+                       __version__))
         self.set_style()
         self.create_menu_bar()
         self.create_widgets()
@@ -819,43 +951,61 @@ class AutocompleteGUI(tk.Frame):
         # ~~~~~~~~~~~~~~~~~~~~~~
         self.file_menu = tk.Menu(self.menubar, tearoff=0)
         self.file_menu.add_command(
-            label='Save result to file...',
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('save'),
             command=self._ask_save_file
         )
         self.file_menu.add_separator()
         self.file_menu.add_command(
-            label='Exit',
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('exit'),
             command=self.master.quit)
-        self.menubar.add_cascade(label='File', menu=self.file_menu)
+        self.menubar.add_cascade(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('file_cascade'),
+            menu=self.file_menu)
 
         # ~~~~~~~~~~~~~~~~~~~~~~
         # Edit Menu
         # ~~~~~~~~~~~~~~~~~~~~~~
         edit_menu = tk.Menu(self.menubar, tearoff=0)
-        edit_menu.add_command(label="Copy", command=self._copy)
-        edit_menu.add_command(label="Cut", command=self._cut)
+        edit_menu.add_command(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('copy'),
+            command=self._copy)
+        edit_menu.add_command(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('cut'),
+            command=self._cut)
         # try:
         #     edit_menu.add_command(label="Paste", command=self._paste)
         # except Exception:
         #     pass
         if self._paste_string_state():
-            edit_menu.add_command(label="Paste", command=self._paste)
+            edit_menu.add_command(
+                label=CURRENT_TEXT_DICT.get('menu_bar').get('paste'),
+                command=self._paste)
         else:
             edit_menu.add_command(
-                label='Paste',
-                command=lambda: print('No string in clipboard!'))
-        edit_menu.add_command(label="Delete", command=self._delete)
-        self.menubar.add_cascade(label="Edit", menu=edit_menu)
+                label=CURRENT_TEXT_DICT.get('menu_bar').get('paste'),
+                command=lambda: print(
+                    CURRENT_TEXT_DICT.get('menu_bar').get(
+                        'no_str_in_clipboard_warning')))
+        edit_menu.add_command(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('delete'),
+            command=self._delete)
+        self.menubar.add_cascade(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('edit_cascade'),
+            menu=edit_menu)
 
         # ~~~~~~~~~~~~~~~~~~~~~~
         # About Menu
         # ~~~~~~~~~~~~~~~~~~~~~~
         self.help_menu = tk.Menu(self.menubar, tearoff=0)
         self.help_menu.add_command(
-            label='Help',
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('help'),
             command=self._display_help)
-        self.help_menu.add_command(label="About", command=self._display_about)
-        self.menubar.add_cascade(label='Help', menu=self.help_menu)
+        self.help_menu.add_command(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('about'),
+            command=self._display_about)
+        self.menubar.add_cascade(
+            label=CURRENT_TEXT_DICT.get('menu_bar').get('help_cascade'),
+            menu=self.help_menu)
 
         self.master.config(menu=self.menubar)
 
@@ -867,13 +1017,16 @@ class AutocompleteGUI(tk.Frame):
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Sidebar configuration area
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        self.config_label = ttk.Label(self.content,
-                                      text='Configurations',
-                                      style='config.TLabel')
+        self.config_label = ttk.Label(
+            self.content,
+            text=CURRENT_TEXT_DICT.get('config').get('config_label'),
+            style='config.TLabel')
 
         self.turn_off_similarity_search_var = tk.IntVar()
         self.similarity_search_checkbutton = ttk.Checkbutton(
-            self.content, text='关闭相似值搜索',
+            self.content,
+            text=CURRENT_TEXT_DICT.get(
+                'config').get('similarity_search_switch'),
             variable=self.turn_off_similarity_search_var,
             onvalue=1, offvalue=0
         )
@@ -881,7 +1034,8 @@ class AutocompleteGUI(tk.Frame):
 
         self.turn_off_spell_check_var = tk.IntVar()
         self.spell_check_checkbutton = ttk.Checkbutton(
-            self.content, text='关闭拼写检查',
+            self.content,
+            text=CURRENT_TEXT_DICT.get('config').get('spell_check_switch'),
             variable=self.turn_off_spell_check_var,
             onvalue=1, offvalue=0
         )
@@ -889,7 +1043,8 @@ class AutocompleteGUI(tk.Frame):
 
         self.totally_match_var = tk.IntVar()
         self.totally_match_checkbutton = ttk.Checkbutton(
-            self.content, text='全字匹配',
+            self.content,
+            text=CURRENT_TEXT_DICT.get('config').get('match_whole_word'),
             variable=self.totally_match_var,
             onvalue=1, offvalue=0
         )
@@ -905,40 +1060,41 @@ class AutocompleteGUI(tk.Frame):
 
         self.search_offline_button = ttk.Button(
             self.content,
-            text='Search Offline',
+            text=CURRENT_TEXT_DICT.get('buttons').get('search_offline_button'),
             style='copy.TButton')
 
         self.search_internet_button = ttk.Button(
             self.content,
-            text='Search Internet',
+            text=CURRENT_TEXT_DICT.get('buttons').get('search_internet_button'),
             style='copy.TButton')
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Four labels & Four candidate listboxes
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-        self.label_1 = ttk.Label(self.content,
-                                 text='Candidates (Startswith / Endswith)',
-                                 style='listbox.TLabel')
+        self.label_1 = ttk.Label(
+            self.content,
+            text=CURRENT_TEXT_DICT.get('labels').get('startswith_endswith_label'),
+            style='listbox.TLabel')
         self.listbox1 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar1 = ttk.Scrollbar(self.content)
 
         self.label_2 = ttk.Label(
             self.content,
-            text='Candidates (Contains)',
+            text=CURRENT_TEXT_DICT.get('labels').get('contains_label'),
             style='listbox.TLabel')
         self.listbox2 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar2 = ttk.Scrollbar(self.content)
 
         self.label_3 = ttk.Label(
             self.content,
-            text='Candidates (Rank by similarity)',
+            text=CURRENT_TEXT_DICT.get('labels').get('similarity_label'),
             style='listbox.TLabel')
         self.listbox3 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar3 = ttk.Scrollbar(self.content)
 
         self.label_4 = ttk.Label(
             self.content,
-            text='Candidates (Spell check, single edit distance)',
+            text=CURRENT_TEXT_DICT.get('labels').get('spell_check_label'),
             style='listbox.TLabel')
         self.listbox4 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar4 = ttk.Scrollbar(self.content)
@@ -952,8 +1108,7 @@ class AutocompleteGUI(tk.Frame):
             textvariable=self.status_label_value,
             style='status.TLabel')
         self.status_label_value.set(
-            'Click "Do Query" button and see results. '
-            '** Double Click ** candidate to see detailed result.')
+            CURRENT_TEXT_DICT.get('labels').get('default_status_label'))
         self.scrolled_text_5 = st.ScrolledText(self.content,
                                                font=('Monospace', 10))
 
@@ -1091,7 +1246,8 @@ class AutocompleteGUI(tk.Frame):
         """Command of Do Query button with multi-processing"""
         query = self.input_box.get().strip()
         if not query:
-            self.status_label_value.set('空的查询！')
+            self.status_label_value.set(
+                CURRENT_TEXT_DICT.get('info_text').get('blank_query_label'))
             return ''
         query_word_object = QueryWord(
             self.keys_for_all, self.dict_for_all)
@@ -1138,59 +1294,78 @@ class AutocompleteGUI(tk.Frame):
     def _query_baidu_baike(self):
         keyword = self.input_box.get().strip()
         if not keyword:
-            self.status_label_value.set('空的查询！')
+            self.status_label_value.set(
+                CURRENT_TEXT_DICT.get('info_text').get('blank_query_label'))
             return ''
-        self.status_label_value.set('正在搜索百度百科，请稍候...')
+        self.status_label_value.set(
+            CURRENT_TEXT_DICT.get('info_text').get('searching_baidu_baike'))
         start_time = time.time()
         baike_result = InternetQuery.prettify_baike_result(
             InternetQuery.search_baidu_baike(keyword))
         if baike_result:
-            baike_result = '百度百科：\n\n%s\n\n\n\n' % baike_result
+            baike_result = '%s\n\n%s\n\n\n\n' % (
+                CURRENT_TEXT_DICT.get('info_text').get('baike_result_info'),
+                baike_result)
             end_time = time.time()
             self._insert_to_text_area(self.scrolled_text_5, baike_result)
-            self.status_label_value.set('百度百科搜索完成！用时：%fs' %
-                                        (end_time - start_time))
+            self.status_label_value.set(
+                '%s%fs' % (
+                    CURRENT_TEXT_DICT.get(
+                        'info_text').get('baike_search_complete'),
+                    end_time - start_time))
         else:
             self._insert_to_text_area(self.scrolled_text_5, baike_result)
-            self.status_label_value.set('查询百度百科未找到结果！')
+            self.status_label_value.set(
+                CURRENT_TEXT_DICT.get('info_text').get('baike_no_result'))
 
     def _query_wikipedia(self):
         keyword = self.input_box.get().strip()
         if not keyword:
-            self.status_label_value.set('空的查询！')
+            self.status_label_value.set(
+                CURRENT_TEXT_DICT.get('info_text').get('blank_query_label')
+            )
             return ''
-        self.status_label_value.set('正在搜索维基百科，请稍候...')
+        self.status_label_value.set(
+            CURRENT_TEXT_DICT.get('info_text').get('searching_wikipedia'))
         start_time = time.time()
         wikipedia_result = InternetQuery.search_wikipedia(keyword)
         if wikipedia_result:
-            wikipedia_result = '维基百科：\n\n%s\n\n\n\n' % wikipedia_result
+            wikipedia_result = '%s\n\n%s\n\n\n\n' % (
+                CURRENT_TEXT_DICT.get(
+                    'info_text').get('wikipedia_result_info'),
+                wikipedia_result)
             end_time = time.time()
             self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
-            self.status_label_value.set('维基百科搜索完成！用时：%fs' %
-                                        (end_time - start_time))
+            self.status_label_value.set(
+                '%s%fs' % (
+                    CURRENT_TEXT_DICT.get(
+                        'info_text').get('wikipedia_search_complete'),
+                    end_time - start_time))
         else:
             self._insert_to_text_area(self.scrolled_text_5, wikipedia_result)
-            self.status_label_value.set('查询维基百科未未找到结果！')
+            self.status_label_value.set(
+                CURRENT_TEXT_DICT.get('info_text').get('wikipedia_no_result'))
 
     def _query_internet_multithreading(self):
         func_list = [self._query_baidu_baike,
                      self._query_wikipedia]
 
-        self.status_label_value.set('开始搜索，请耐性等待...')
-        print('开始搜索，请耐性等待...')
+        self.status_label_value.set(
+            CURRENT_TEXT_DICT.get('info_text').get('start_searching'))
         self.scrolled_text_5.delete('1.0', 'end-1c')
         self.scrolled_text_5.update_idletasks()
         for i, each_func in enumerate(func_list):
-            print('start: ', i)
             thread = Thread(target=each_func)
             thread.setDaemon(True)
             thread.start()
             # thread.join()
             time.sleep(0.1)
-        self.status_label_value.set('搜索完成！')
+        self.status_label_value.set(
+            CURRENT_TEXT_DICT.get('info_text').get('search_complete'))
 
     def _display_candidates(self):
-        self.status_label_value.set('开始搜索离线数据，请稍候...')
+        self.status_label_value.set(
+            CURRENT_TEXT_DICT.get('info_text').get('start_offline_search'))
         start_time = time.time()
         result_dict = self._query_offline_data()
         end_time = time.time()
@@ -1215,8 +1390,13 @@ class AutocompleteGUI(tk.Frame):
         self.listbox4.delete('0', 'end')
         self.listbox4.insert('end', result_dict['3'])
 
-        self.status_label_value.set('离线数据搜索完成！用时：%fs。双击候选词以查看详细信息' %
-                                    (end_time - start_time))
+        self.status_label_value.set(
+            '%s%fs%s' % (
+                CURRENT_TEXT_DICT.get(
+                    'info_text').get('offline_search_complete_1'),
+                end_time - start_time,
+                CURRENT_TEXT_DICT.get(
+                    'info_text').get('offline_search_complete_2')))
 
     def _display_search_result(self, widget, is_clean_word=True):
         """Clean content in Output Area and insert new value."""
@@ -1253,15 +1433,17 @@ class AutocompleteGUI(tk.Frame):
             else:
                 self.scrolled_text_5.insert(
                     'end',
-                    ('请安装 prettytable 以获得更清晰的结果视图。\n'
-                     '安装方法： pip install prettytable\n\n'
+                    ('%s pip install prettytable\n\n'
                      '+--------------+-------------+---------'
                      '+-------+-------+-------------+---------+\n'
                      '| Short Pinyin | Long Pinyin | Chinese '
                      '| Latin | Namer | Data Source | Web URL |\n'
                      '+--------------+-------------+---------+'
                      '-------+-------+-------------+---------+\n'
-                     '\n%s\n' % ('=' * 100)))
+                     '\n%s\n' % (
+                          CURRENT_TEXT_DICT.get(
+                              'info_text').get('pretty_table_install_info'),
+                          '=' * 100)))
                 for each_result in result:
                     elements = '  |  '.join(each_result)
                     self.scrolled_text_5.insert('end', elements)
