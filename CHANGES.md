@@ -14,6 +14,7 @@ Feature
 Improve:
 
 * 使用 PrettyTable 美化百度百科的搜索结果
+* 添加本地zip格式的library，无需安装第三方依赖
 
 Bugfix:
 
