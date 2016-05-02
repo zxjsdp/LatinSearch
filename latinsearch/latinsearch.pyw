@@ -6,9 +6,12 @@
 from __future__ import (print_function, unicode_literals,
                         with_statement)
 
+import sys
+# Local zipped libraries
+sys.path.insert(0, 'lib.zip')
+
 import os
 import re
-import sys
 import time
 import urllib
 import requests
