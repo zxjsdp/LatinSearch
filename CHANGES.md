@@ -1,13 +1,23 @@
 CHANGES
 =======
 
+0.3.2
+-----
+
+Release date: 2016-
+
+Feature:
+
+Improve:
+
+Bugfix:
+
 0.3.1
 -----
 
-Release data:
+Release date: 2016-05-03
 
-Feature
--------
+Feature:
 
 * 更为完善的中文语言及英文语言切换
 
@@ -23,7 +33,7 @@ Bugfix:
 0.3.0
 -----
 
-Release data: 2016-05-01
+Release date: 2016-05-01
 
 Feature:
 
