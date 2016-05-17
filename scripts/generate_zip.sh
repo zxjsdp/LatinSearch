@@ -30,7 +30,7 @@ cd ..
 
 echo "Copying necessary files to LatinSearch..."
 # Copying file to LatinSearch folder
-cp -rf latin_search/data resources README.md LICENSE LatinSearch
+cp -rf latin_search/* README.md LICENSE LatinSearch
 
 if [[ $UNAMES == 'Linux' ]] || [[ $UNAMES == 'Darwin'  ]]
 then
