@@ -1214,28 +1214,40 @@ class AutocompleteGUI(tk.Frame):
             self.content,
             text=CURRENT_TEXT_DICT.get('labels').get('startswith_endswith_label'),
             style='listbox.TLabel')
-        self.listbox1 = tk.Listbox(self.content, font=('Monospace', 10))
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.listbox1 = tk.Listbox(self.content, font=('Monaco', 12))
+        else:
+            self.listbox1 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar1 = ttk.Scrollbar(self.content)
 
         self.label_2 = ttk.Label(
             self.content,
             text=CURRENT_TEXT_DICT.get('labels').get('contains_label'),
             style='listbox.TLabel')
-        self.listbox2 = tk.Listbox(self.content, font=('Monospace', 10))
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.listbox2 = tk.Listbox(self.content, font=('Monaco', 12))
+        else:
+            self.listbox2 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar2 = ttk.Scrollbar(self.content)
 
         self.label_3 = ttk.Label(
             self.content,
             text=CURRENT_TEXT_DICT.get('labels').get('similarity_label'),
             style='listbox.TLabel')
-        self.listbox3 = tk.Listbox(self.content, font=('Monospace', 10))
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.listbox3 = tk.Listbox(self.content, font=('Monaco', 12))
+        else:
+            self.listbox3 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar3 = ttk.Scrollbar(self.content)
 
         self.label_4 = ttk.Label(
             self.content,
             text=CURRENT_TEXT_DICT.get('labels').get('spell_check_label'),
             style='listbox.TLabel')
-        self.listbox4 = tk.Listbox(self.content, font=('Monospace', 10))
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.listbox4 = tk.Listbox(self.content, font=('Monaco', 12))
+        else:
+            self.listbox4 = tk.Listbox(self.content, font=('Monospace', 10))
         self.scrollbar4 = ttk.Scrollbar(self.content)
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1248,8 +1260,12 @@ class AutocompleteGUI(tk.Frame):
             style='status.TLabel')
         self.status_label_value.set(
             CURRENT_TEXT_DICT.get('labels').get('default_status_label'))
-        self.scrolled_text_5 = st.ScrolledText(self.content,
-                                               font=('Monospace', 10))
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.scrolled_text_5 = st.ScrolledText(self.content,
+                                                   font=('Monaco', 12))
+        else:
+            self.scrolled_text_5 = st.ScrolledText(self.content,
+                                                   font=('Monospace', 10))
 
         self._display_help()
 
