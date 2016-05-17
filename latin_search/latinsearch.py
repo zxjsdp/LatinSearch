@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join('data', 'lib.zip'))
 import re
 import time
 import urllib
+import platform
 import requests
 from threading import Thread
 from bs4 import BeautifulSoup
@@ -46,6 +47,11 @@ __version__ = "v0.3.1"
 __author__ = 'Jin'
 
 _history = []
+
+CURRENT_PLATFORM = platform.system()
+WINDOWS_PLATFORM = 'Windows'
+LINUX_PLATFORM = 'Linux'
+MAC_PLATFORM = 'Darwin'
 
 DATA_FILE = os.path.abspath('data/latin_without_sougou.csv')
 PICKLE_KEYS_FILE = os.path.abspath('data/latin_60000.keys.pickle')
@@ -1339,12 +1345,20 @@ class AutocompleteGUI(tk.Frame):
     def create_right_menu(self):
         # Right menu for input combobox
         right_menu_input_box = RightClickMenu(self.input_box)
-        self.input_box.bind('<Button-3>', right_menu_input_box)
+        # Fix right click menu on Mac OSX
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.input_box.bind('<Button-2>', right_menu_input_box)
+        else:
+            self.input_box.bind('<Button-3>', right_menu_input_box)
 
         # Right menu for output area
         right_menu_scrolled_text_5 = RightClickMenuForScrolledText(
             self.scrolled_text_5)
-        self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
+        # Fix right click menu on Mac OSX
+        if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+            self.scrolled_text_5.bind('<Button-2>', right_menu_scrolled_text_5)
+        else:
+            self.scrolled_text_5.bind('<Button-3>', right_menu_scrolled_text_5)
 
     def bind_func(self):
         self.search_offline_button['command'] = self._display_candidates
@@ -1365,7 +1379,11 @@ class AutocompleteGUI(tk.Frame):
                         lambda e: self._display_search_result(widget))
 
             right_menu_widget = RightClickMenuForListBox(widget)
-            widget.bind("<Button-3>", right_menu_widget)
+            # Fix right click menu on Mac OSX
+            if CURRENT_PLATFORM in (MAC_PLATFORM, ):
+                widget.bind("<Button-2>", right_menu_widget)
+            else:
+                widget.bind("<Button-3>", right_menu_widget)
 
         for listbox in [self.listbox1, self.listbox2,
                         self.listbox3, self.listbox4]:
