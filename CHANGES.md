@@ -10,7 +10,12 @@ Feature:
 
 Improve:
 
+* Reorganize folder structure for easier download.
+
 Bugfix:
+
+* Fix column width problem
+* Fix right click menu on Mac OSX (#33)
 
 0.3.1
 -----
