@@ -1323,17 +1323,17 @@ class AutocompleteGUI(tk.Frame):
 
         # listbox1  listbox2  listbox3  listbox4
         #   110        110      110       110
-        self.content.columnconfigure(0, weight=1)
-        self.content.columnconfigure(1, weight=1)
+        self.content.columnconfigure(0, weight=1, uniform="fred")
+        self.content.columnconfigure(1, weight=1, uniform="fred")
         self.content.columnconfigure(2, weight=0)
-        self.content.columnconfigure(3, weight=1)
-        self.content.columnconfigure(4, weight=1)
+        self.content.columnconfigure(3, weight=1, uniform="fred")
+        self.content.columnconfigure(4, weight=1, uniform="fred")
         self.content.columnconfigure(5, weight=0)
-        self.content.columnconfigure(6, weight=1)
-        self.content.columnconfigure(7, weight=1)
+        self.content.columnconfigure(6, weight=1, uniform="fred")
+        self.content.columnconfigure(7, weight=1, uniform="fred")
         self.content.columnconfigure(8, weight=0)
-        self.content.columnconfigure(9, weight=1)
-        self.content.columnconfigure(10, weight=1)
+        self.content.columnconfigure(9, weight=1, uniform="fred")
+        self.content.columnconfigure(10, weight=1, uniform="fred")
         self.content.columnconfigure(11, weight=0)
 
     def create_right_menu(self):
