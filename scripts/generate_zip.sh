@@ -32,6 +32,9 @@ echo "Copying necessary files to LatinSearch..."
 # Copying file to LatinSearch folder
 cp -rf latin_search/* README.md LICENSE LatinSearch
 
+# Delete original LatinSearch.zip
+rm LatinSearch.zip
+
 if [[ $UNAMES == 'Linux' ]] || [[ $UNAMES == 'Darwin'  ]]
 then
     # Use zip on Linux & Mac OSX
