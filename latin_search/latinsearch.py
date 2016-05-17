@@ -699,7 +699,10 @@ class InternetQuery(object):
         req.encoding = 'utf-8'
         soup = BeautifulSoup(req.text, "html.parser")
         outcomes = soup.findAll('h3', {'class': 'c-gap-bottom-small'})
-        first_baike_url = outcomes[0].find(href=True).get('href')
+        if outcomes:
+            first_baike_url = outcomes[0].find(href=True).get('href')
+        else:
+            return ''
 
         req = session.get(first_baike_url, headers=HEADER)
         req.encoding = 'utf-8'
