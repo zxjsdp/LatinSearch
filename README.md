@@ -18,21 +18,10 @@ LatinSearch
 下载
 ---
 
-1. 对于 Windows 用户，推荐使用已编译为字节码并更改扩展名（这样运行时不会出现 console）的 pyw 文件：
-
-    对于配置较差的电脑，这将显著提升软件打开的速度。
-
-    - 下载最新的程序文件：[点击这里下载](https://github.com/zxjsdp/LatinSearch/archive/master.zip)
-    - 解压缩
-    - 进入 `LatinSearch-master/pyw` 目录
-    - 双击运行：`latinsearch_latest.pyw`
-
-2. 对于 Linux & Mac OS X 用户，可以直接运行最新的 `.pyw` 文件
-
-    - 下载最新的程序文件：[点击这里下载](https://github.com/zxjsdp/LatinSearch/archive/master.zip)
-    - 解压缩
-    - 进入 `LatinSearch-master/latinsearch` 目录
-    - 双击运行：`latinsearch.pyw`
+- 对于 Windows 用户，需要先下载安装 [Python](https://www.python.org/downloads/). Linux 或者 Mac OSX 系统已自带。
+- 下载最新版本的 LatinSearch 程序文件：[点击这里下载](https://raw.githubusercontent.com/zxjsdp/LatinSearch/master/LatinSearch.zip)。
+- 解压缩。
+- 双击运行：`LatinSearch.pyw` 或者 `latinsearch.py`。
 
 使用方法
 -------
