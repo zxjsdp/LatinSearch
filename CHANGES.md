@@ -8,6 +8,8 @@ Release date: 2016-
 
 Feature:
 
+* Add keyword search history to input combobox.
+
 Improve:
 
 * Reorganize folder structure for easier download.
