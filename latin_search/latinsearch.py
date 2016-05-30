@@ -48,6 +48,7 @@ __version__ = "v0.3.1"
 __author__ = 'Jin'
 
 _history = []
+HISTORY_SIZE = 10
 
 CURRENT_PLATFORM = platform.system()
 WINDOWS_PLATFORM = 'Windows'
@@ -1425,6 +1426,7 @@ class AutocompleteGUI(tk.Frame):
         result_dict = {'0': [], '1': [], '2': [], '3': ''}
         match_whole_word = self.totally_match_var.get()
         if query:
+            self._refresh_combobox_history(query)
             # If name match keys in dictionary, just do strategy 1 & 2
             if query in self.dict_for_all:
                 turn_on_mode = [True, True, False, False]
@@ -1468,6 +1470,7 @@ class AutocompleteGUI(tk.Frame):
             self.status_label_value.set(
                 CURRENT_TEXT_DICT.get('info_text').get('blank_query_label'))
             return ''
+        self._refresh_combobox_history(keyword)
         self.status_label_value.set(
             CURRENT_TEXT_DICT.get('info_text').get('searching_baidu_baike'))
         start_time = time.time()
@@ -1676,6 +1679,12 @@ class AutocompleteGUI(tk.Frame):
     def _display_about(self):
         self.scrolled_text_5.delete('0.1', 'end-1c')
         self.scrolled_text_5.insert('end', ABOUT_INFO)
+
+    def _refresh_combobox_history(self, query):
+        """Add new search keyword to candidates of input combobox"""
+        global _history
+        _history.append(query)
+        self.input_box['values'] = _history[-1 * HISTORY_SIZE:][::-1]
 
 
 def dump_with_pickle(keys_for_all, dict_for_all):
