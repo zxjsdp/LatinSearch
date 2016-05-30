@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join('data', 'lib.zip'))
 
 import re
 import time
+import json
 import urllib
 import platform
 import requests
@@ -1702,6 +1703,23 @@ def load_with_pickle(pickle_keys_file, pickle_dict_file):
         dict_for_all = pickle.loads(pickle_dict)
 
     return keys_for_all, dict_for_all
+
+
+def loads_data_from_json_file(json_file):
+    """Extract data from local json file"""
+    if os.path.isfile(json_file):
+        with open(json_file, 'rb') as f_in:
+            data = json.loads(f_in.read())
+    return data
+
+
+def dumps_data_to_json_file(json_file, data):
+    """Dump data to local json file"""
+    try:
+        with open(json_file, 'wb') as f_out:
+            json.dump(data, f_out, indent=4, separators=(',', ': '))
+    except IOError as e:
+        print("Cannot write to json file: %s" % e)
 
 
 def gui_main():
