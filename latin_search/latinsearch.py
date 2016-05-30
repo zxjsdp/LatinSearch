@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join('data', 'lib.zip'))
 
 import re
 import time
+import json
 import urllib
 import platform
 import requests
@@ -47,6 +48,7 @@ __version__ = "v0.3.1"
 __author__ = 'Jin'
 
 _history = []
+HISTORY_SIZE = 10
 
 CURRENT_PLATFORM = platform.system()
 WINDOWS_PLATFORM = 'Windows'
@@ -1424,6 +1426,7 @@ class AutocompleteGUI(tk.Frame):
         result_dict = {'0': [], '1': [], '2': [], '3': ''}
         match_whole_word = self.totally_match_var.get()
         if query:
+            self._refresh_combobox_history(query)
             # If name match keys in dictionary, just do strategy 1 & 2
             if query in self.dict_for_all:
                 turn_on_mode = [True, True, False, False]
@@ -1467,6 +1470,7 @@ class AutocompleteGUI(tk.Frame):
             self.status_label_value.set(
                 CURRENT_TEXT_DICT.get('info_text').get('blank_query_label'))
             return ''
+        self._refresh_combobox_history(keyword)
         self.status_label_value.set(
             CURRENT_TEXT_DICT.get('info_text').get('searching_baidu_baike'))
         start_time = time.time()
@@ -1676,6 +1680,12 @@ class AutocompleteGUI(tk.Frame):
         self.scrolled_text_5.delete('0.1', 'end-1c')
         self.scrolled_text_5.insert('end', ABOUT_INFO)
 
+    def _refresh_combobox_history(self, query):
+        """Add new search keyword to candidates of input combobox"""
+        global _history
+        _history.append(query)
+        self.input_box['values'] = _history[-1 * HISTORY_SIZE:][::-1]
+
 
 def dump_with_pickle(keys_for_all, dict_for_all):
     """Dump generated dictinary to pickle raw file.
@@ -1702,6 +1712,23 @@ def load_with_pickle(pickle_keys_file, pickle_dict_file):
         dict_for_all = pickle.loads(pickle_dict)
 
     return keys_for_all, dict_for_all
+
+
+def loads_data_from_json_file(json_file):
+    """Extract data from local json file"""
+    if os.path.isfile(json_file):
+        with open(json_file, 'rb') as f_in:
+            data = json.loads(f_in.read())
+    return data
+
+
+def dumps_data_to_json_file(json_file, data):
+    """Dump data to local json file"""
+    try:
+        with open(json_file, 'wb') as f_out:
+            json.dump(data, f_out, indent=4, separators=(',', ': '))
+    except IOError as e:
+        print("Cannot write to json file: %s" % e)
 
 
 def gui_main():
